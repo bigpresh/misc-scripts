@@ -1,0 +1,156 @@
+#!/usr/bin/perl -w
+
+
+# auto-name-incoming
+#
+# Quick dirty script to watch a directory for new files and automagically
+# move them to another directory, automatically naming them,
+#
+# A useful trick for saving images from stock photo sites which are misconfigured
+# so that the browser tries to save each image as download.php etc.
+#
+# A little rough, but not too bad for something knocked up in about 30 minutes
+# at night.  God bless Perl :-)
+#
+# David Precious, October 2005
+
+# $Id: auto-name-incoming 62 2006-11-15 23:46:41Z davidp $
+
+$VERSION = '0.0.1';
+
+use File::Copy;
+
+my %parms = &get_cli_params;
+
+
+if (!$parms{'watch'}) {
+	print "Must specify directory to watch for new files with --watch\n\n"
+	     ."Use --help for all options.\n";
+	exit 1;
+}
+if (!$parms{'target'}) {
+	print "Must specify target directory with --target\n\n"
+	     ."Use --help for all options.\n";
+	exit 2;
+}
+	
+if ($params{'help'}) { &print_help; }
+
+if ($parms{'version'}) { print "auto-name-incoming $VERSION\n"; exit; }
+
+$parms{'watch'}  .= '/' unless (substr($parms{'watch'},  -1, 1) eq '/');
+$parms{'target'} .= '/' unless (substr($parms{'target'}, -1, 1) eq '/');
+
+
+# right, get to it
+
+#chdir($parms{'watch'});
+
+while (1) {
+
+	opendir(DIR,$parms{'watch'}) || die("Cannot open directory !\n");
+	@files = readdir(DIR);
+	closedir(DIR);
+	
+	foreach $file (@files) {
+		next if ($file eq "." || $file eq "..");
+
+		next if ($file =~ /\.part$/); # skip partial files...
+
+		$file = $parms{'watch'} . $file;
+
+		$ext = ($file =~ /\.(.+)$/)? $1 : '';
+		$ext = ($parms{'force-ext'})? $parms{'force-ext'} : $ext;
+		if ($ext && substr($ext, 0, 1) ne '.') { $ext = '.' . $ext; }
+
+		$prefix = ($parms{'prefix'})? $parms{'prefix'} : '';
+
+		$params{'start'} = 0 unless $params{'start'};
+
+        # TODO: make condition prevent x going over $digits
+		for (my $x = $params{'start'}; 1; $x++) {
+			$digits = &get_digits($x);
+			$targetfile = $parms{'target'} . $prefix . $digits . $ext;
+			last unless (-e $targetfile);
+        }
+			
+		print "$file -> $targetfile\n";
+
+		copy($file, $targetfile) or die "File cannot be copied.";
+		unlink($file) || die "Failed to unlink $file ($!)!";
+    
+    } # end of foreach loop through incoming files
+		
+	sleep 1; # no need to continuously poll for files, so be nice
+
+	
+} # end of inifinite while() loop
+
+
+
+
+
+
+sub get_digits {
+
+    my ($x, $d) = @_;
+    
+    $d = ($d)? $d : 4;
+    
+    return sprintf('%0'.$d.'d', $x);
+
+} 
+
+
+
+
+sub print_help {
+
+print qq[
+
+auto-name-incoming takes the following parameters:
+
+ --watch=... specifies the directory to watch for incoming files
+
+ --target=... specifies the directory renamed files should go in
+
+The following optional parameters customise its behaviour:
+
+ --digits=  specifies the number of digits to use (default 4)
+
+ --prefix=  specifies text to prefix the renamed file with
+
+ --force-ext= forces the file extension to this (default is to keep existing)
+
+ --start=  forces digit numbering to start at given value
+
+];
+exit;
+ 
+} # end of sub print_help
+
+
+
+sub get_cli_params {
+    # returns a hash of all the parameters passed to us on the command
+    # line as --param[=value].
+    
+    # let's get the params given to us on the command line:
+    my %myargs = ();
+    foreach $arg (@ARGV) {
+        if ($arg =~ /\-\-([a-z0-9_-]+)=?(.+)?$/ig) {
+            $myargs{$1} = $2;
+            if (!$myargs{$1}) { $myargs{$1} = ''; }
+            # make sure it that got set, since if the arg
+            # has no value, it won't get set otherwise.
+        }
+    }
+    
+    return %myargs;
+
+} # end of sub get_cli_params
+
+
+
+
+

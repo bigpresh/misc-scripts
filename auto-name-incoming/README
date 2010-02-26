@@ -1,0 +1,7 @@
+Quick dirty script to watch a directory for new files and automagically
+move them to another directory, automatically naming them,
+
+A useful trick for saving images from stock photo sites which are
+misconfigured so that the browser tries to save each image as download.php etc.
+
+
