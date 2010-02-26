@@ -1,0 +1,5 @@
+Log in to LambdaMOO, perform some actions, log out.
+
+Run from cron periodically to ensure character doesn't get reaped if it hasn't
+been used for a while.
+

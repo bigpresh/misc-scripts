@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+
+use strict;
+use Net::Telnet;
+use YAML;
+use Config::Auto;
+
+# $Id: lambdamoo-auto.pl 590 2009-05-06 22:24:26Z davidp $
+# Log in to LambdaMOO, perform some actions, log out.
+# Run from cron periodically to ensure character doesn't
+# get reaped.
+# Config::Auto will be used to read config; you can pass the name of the
+# config file if you need to.
+
+my $config = Config::Auto::parse($ARGV[0] || '') or die "No config found";
+
+for my $param (qw(host port character password email)) {
+    if (!$config->{$param}) {
+        die "Config does not contain $param";
+    }
+}
+$config->{timeout} ||= 10;
+
+my $telnet = new Net::Telnet;
+$telnet->open(Host => $config->{host}, Port => $config->{port})
+    or die "Failed to connect to MOO";
+
+$telnet->waitfor(
+    '/The lag is (.+); there are (\d+) connected/');
+$telnet->print("CONNECT $config->{character} $config->{password}");
+$telnet->waitfor('/\*{3} Connected \*{3}/');
+print "OK, connected..\n";
+my @actions = (
+    ':is automatically avoiding reaping with a quick login',
+    '"if you want to get hold of me, email ' . $config->{email},
+    ':does a little dance',
+    ':is done.',
+    '@quit',
+);
+for my $action (@actions) {
+    $telnet->print($action);
+    sleep 5;
+}
+$telnet->close;
+
+
