@@ -1,0 +1,21 @@
+Set ID3 tags on MP3 files.
+
+Options:
+
+--track, --title, --artist, --album, --comment
+    Set the specified IDv3 tags on each file.
+
+--verbose / -v
+    Be verbose.
+
+--dry-run / --dryrun / -d
+    Just report what we would have done, don't do it.
+
+
+Examples:
+
+To set the artist tag for all MP3s in the current directory:
+
+tagtrack --artist 'Some Great Band' *.mp3
+
+

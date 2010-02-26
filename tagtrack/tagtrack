@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+
+# $Id: tagtrack 586 2009-05-06 21:56:37Z davidp $
+
+use strict;
+use 5.010;
+use Music::Tag;
+use Getopt::Lucid;
+use Data::Dumper;
+
+# Set ID3 tags on a file.
+
+# The options we can take - these correspond to the name of the tag that
+# they'll set:
+my @options = qw(track title artist album comment);
+
+my @option_specs = (
+    Getopt::Lucid::Switch('verbose|v'),
+    Getopt::Lucid::Switch('dry-run|dryrun|d'),
+    map { Getopt::Lucid::Param($_) } @options,
+);
+my $opt = Getopt::Lucid->getopt(\@option_specs);
+
+my @tags_to_set = grep { $opt->{seen}{$_} } @options;
+# Getopt::Lucid will have taken all the recognised params from @ARGV, and
+# left behind the filenames we need to operate on:
+my @files = @ARGV;
+
+say "Files we'll work on: " . join ',', @files  if $opt->get_verbose;
+
+if (!@tags_to_set) {
+    say "Nothing to do.  Use one or more of the options:\n" .
+        join ', ', map {'--'.$_} @options;
+    exit;
+}
+
+say "Setting tag(s) " . human_friendly_list(@tags_to_set) .
+    " on " . scalar @files . " files";
+
+file:
+my $filenum = 0;
+for my $file (@files) {
+    if (!-f $file) {
+        warn "$file is not a file";
+        next file;
+    }
+    if (!-r _ || !-w _) {
+        warn "$file is not readable/writable";
+        next file;
+    }
+
+    $filenum++;
+
+    # OK, read the current tags:
+    my $tags = Music::Tag->new($file, { quiet => !$opt->get_verbose });
+    if (!$tags) {
+        die "Music::Tag failed to read $file";
+    }
+    $tags->get_tag || die "Failed to parse tags in $file";
+
+    # For each tag we might have been asked to set, set it:
+    for my $tag (@tags_to_set) {
+        my $param_method = "get_$tag";
+        my $newval = $opt->$param_method();
+        if ($tag eq 'track' && $newval eq 'auto') { $newval = $filenum; }
+        say "Setting $tag for $file to $newval" if $opt->get_verbose;
+        $tags->$tag($newval) unless $opt->get_dry_run;
+    }
+
+    $tags->set_tag unless $opt->get_dry_run;
+    $tags->close;
+}
+
+
+# Turn a list into a human friendly string, e.g. "foo, bar and baz"
+sub human_friendly_list {
+    return '' unless @_;
+    return @_ > 1? join(', ', @_[0..@_-2]) . ' and ' . $_[-1] : @_[0];
+}
+
