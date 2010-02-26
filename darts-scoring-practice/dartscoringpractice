@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+
+use strict;
+use 5.010;
+
+# $Id: dartscoringpractice 738 2009-10-01 22:51:27Z davidp $
+
+my $remaining = 501;
+
+throw:
+while ($remaining >= 2) {
+    my $scored = int rand(180) + 1;
+    if ($remaining - $scored < 2) {
+        say "Bust";
+        next throw;
+    }
+    say "$remaining remained";
+    print "$scored scored - enter new remaining: ?> ";
+    my $answer;
+    guess:
+    while ($answer != $remaining - $scored) {
+        if ($answer) { print "Try again ?> "; }
+        chomp($answer = <>);
+
+        # if the answer starts with "r", reverse the digits; this is to make it
+        # easier to work backwards.
+        if (my($digits) = $answer =~ m{r(\d+)}) {
+            $answer = join '', reverse split //, $digits;
+        }
+
+        # If the answer is '?', tell them the correct answer.
+        if ($answer eq '?') {
+            $answer = $remaining - $scored;
+            say "Fool.  It was $answer";
+            last guess;
+        }
+    }
+    say "** OK, $scored scored, $remaining left";
+    $remaining -= $scored;
+}
+
+
+
