@@ -1,0 +1,7 @@
+A recursive diff tool, with ability to filter files it looks at.
+
+usage: diffr -s source -d dest [-p pattern]
+
+if -p is given, we will only do the diff for filenames which match
+this pattern - this matches the full path, so a pattern of 'foo' will
+match 'foo.txt', '/home/foo/bar' etc. 
