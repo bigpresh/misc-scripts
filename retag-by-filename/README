@@ -1,0 +1,34 @@
+Retag auto files based on their filenames.
+
+Given a pattern with named captures, set the ID tags for each named file based
+on that pattern.
+
+Options:
+
+--verbose / -v
+    Be verbose.
+
+--dry-run / --dryrun / -d
+    Just show what we would have done, don't do it
+
+--pattern / -p
+    Specify a Perl regex with named captures
+
+
+For an example:
+
+[davidp@supernova:~]$ ./retag-by-filename.pl --dry-run \
+  --pattern="(?<track> \d+) \s - \s (?<title> .+ ) \s - \s (?<artist> .+ ) \.mp3" \
+  /shared/music/Complete\ Albums/Oasis\ -\ The\ Masterplan/*.mp3
+[01] Acquiesce by Oasis ()
+[02] Underneath The Sky by Oasis ()
+[03] Talk Tonight by Oasis ()
+....
+
+If I'd left out the --dry-run option, it would have retagged the files.
+
+The tags which can be set, by including a named capture with the matching name,
+are: track, title, artist, comment.
+
+
+

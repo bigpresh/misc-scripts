@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+# $Id: retag-by-filename.pl 587 2009-05-06 22:01:45Z davidp $
+
+use strict;
+use 5.010;
+use Music::Tag;
+use Getopt::Lucid;
+use File::Basename;
+
+# Given a regex (with named captures) and a list of files, retag the files
+# based on the pattern.
+# Example:
+# --pattern='(?<track> \d+ ) \s (?<title> .+) - (?<artist> .+ ) \.mp3' *
+# Note: patterns have /xmsi modifier applied to them
+
+my @option_specs = (
+    Getopt::Lucid::Switch('verbose|v'),
+    Getopt::Lucid::Switch('dry-run|dryrun|d'),
+    Getopt::Lucid::Param('pattern|p')->required(),
+);
+my $opt = Getopt::Lucid->getopt(\@option_specs);
+my $pattern_val = $opt->get_pattern;
+my $pattern = qr/$pattern_val/xmsi       # lack of \Q..\E here is intentional.
+    or die "Failed to parse pattern";
+
+# Getopt::Lucid will have removed recognised options from @ARGV, leaving behind
+# the files we need to work on:
+my @files = @ARGV;
+# Now, look for files in the directory, and see what to retag them to:
+for my $file (@files) {
+    my $filename = File::Basename::basename($file);
+    
+    if ($filename =~ $pattern) {
+        say "[$+{track}] $+{title} by $+{artist} ($+{comment})";
+
+        next if ($opt->get_dry_run);
+
+        my $tags = Music::Tag->new($file,
+            { quiet => ! $opt->get_verbose });
+        $tags->get_tag or warn "Failed to read tags for $filename" && next;
+        for my $tag(qw(track title artist comment)) {
+            say "Setting $tag" if $opt->get_verbose;
+            $tags->$tag( $+{$tag} || '');
+        }
+        $tags->set_tag or warn "Failed to set tags for $filename" && next;
+        $tags->close;
+
+    } else {
+        warn "$file does not match $pattern";
+    }
+}
