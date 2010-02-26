@@ -1,0 +1,5 @@
+Loop through a directory and find duplicate
+files, based on the MD5 sum (therefore finding
+files with identical content even if their timestamp
+and attributes are different)
+
