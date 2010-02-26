@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+
+# $Id: tabulate 822 2010-01-28 13:27:09Z davidp $
+
+use strict;
+use Text::Tabulate;
+use Getopt::Lucid;
+
+my @option_specs = (
+    Getopt::Lucid::Param('fieldspec|f'),
+    Getopt::Lucid::Param('headers|h'),
+    Getopt::Lucid::Param('skipfirst|skip-first|s')->default(0),
+    Getopt::Lucid::Param('filter|m'),
+    Getopt::Lucid::Param('keepfirst|keep-first|keep-first-rows|K', qr/\d+/),
+    Getopt::Lucid::Param('separator|seperator|sep')->default('|'),
+    Getopt::Lucid::Param('spliton|split-on')->default('\s+'),
+);
+
+my $opt = Getopt::Lucid->getopt(\@option_specs);
+
+my @rows;
+my $fieldspec = $opt->get_fieldspec;
+my $split_on = $opt->get_spliton;
+$split_on = qr/$split_on/;
+for (<>) {
+    my @fields = split $split_on;
+    if ($fieldspec) {
+        push @rows, join "\t",  eval "\@fields[$fieldspec]";
+    } else {
+        push @rows, join "\t", @fields;
+    }
+}
+
+# If we were asked to skip some initial rows, do so:
+if (my $skip = $opt->get_skipfirst) {
+    shift @rows for 1..$skip;
+}
+
+
+# If we're filtering the rows we output to rows which match a given pattern,
+# do that now.
+my @output;
+if (my $match = $opt->get_filter) {
+    # If we were told to preserve the first X rows, do so:
+    if (my $keep = $opt->get_keepfirst) {
+        push @output, shift @rows for 1..$keep;
+    }
+
+    # Now, go through and add rows if they match the pattern
+    # TODO: Maybe make it possible to match only on a given column
+    push @output, grep { /$match/ } @rows;
+
+} else {
+    # We're outputting everything, so it's easy
+    @output = @rows;
+}
+
+# If we got column names, add them as the first row of the table:
+my @headings;
+if (my $heading_opt = $opt->get_headers) {
+    unshift @output, join "\t", @headings;
+}
+
+my $tabulate = Text::Tabulate->new(
+    gutter => $opt->get_separator,
+    left   => $opt->get_separator,
+    right  => $opt->get_separator,
+    joint => "\n",
+);
+print scalar $tabulate->format(@output). "\n";
+
+
+

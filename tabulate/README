@@ -1,0 +1,53 @@
+A simple script to tabulate data within a Unix pipeline into an ASCII-art table,
+optionally filtering the data, taking only certain columns, etc.
+
+A rather contrived example:
+
+[davidp@supernova:~]$ ps ax
+  PID TTY      STAT   TIME COMMAND
+    1 ?        Ss     0:09 init [2]  
+    2 ?        S<     0:00 [kthreadd]
+    3 ?        S<     0:00 [migration/0]
+    4 ?        S<     2:35 [ksoftirqd/0]
+    5 ?        S<     0:00 [watchdog/0]
+
+Let's say I want that in a table, only want the first and last column, and only want processes with 'ssh in the name:
+
+[davidp@supernova:~]$ ps ax | ./tabulate -f 0,4, --filter ssh -K 1
+|13345|/usr/sbin/sshd|
+|15036|sshd:         |
+|15038|sshd:         |
+|15660|sshd:         |
+|15662|sshd:         |
+
+
+TODO: document properly :)
+
+Options taken:
+
+--fieldspec / -f
+    List the columns you want.  Note - indexing starts at 0.
+    Examples: 0,3 - first and third.  0..3 - first four columns.  
+
+--headers / -h
+    Specify column heading names
+
+--filter / -m
+    Include only rows which match the given pattern
+
+--skip-first / --skipfirst / -s
+    Skip the first X rows.  Example: --skip-first=1
+
+--keep-first / --keepfirst / -K
+    Do not discard the first X rows.  Only useful when using --filter.
+
+--separator / --seperator / --sep
+    Character to use to separate columns in output.  Defaults to '|'.
+
+--split-on / --spliton
+    Pattern to use to split input into columns.  Default: '\s+' (whitespace)
+
+
+
+
+
