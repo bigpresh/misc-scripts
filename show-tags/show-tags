@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+
+
+# Display the tags of all the tracks in the given dir
+# $Id: show-tags 581 2009-04-28 10:00:20Z davidp $
+
+use strict;
+use File::Find::Rule;
+use Music::Tag;
+use Cwd;
+use Text::Tabulate;
+
+my $startdir = $ARGV[0] || getcwd;
+
+if (!-d $startdir) {
+    die "$startdir is not a directory";
+}
+
+my @files = File::Find::Rule->file()->name(qr/\.mp3$/i)->in($startdir);
+
+my @lines;
+file:
+for my $file (@files) {
+    my $info = Music::Tag->new($file);
+    ($info && $info->get_tag) or do {
+        print "Error reading ID3 tags for: $file\n";
+        next file;
+    };
+    push @lines, join "\t", (
+        $info->track()  || 'No track', 
+        $info->title()  || 'No title',
+        $info->artist() || 'No artist',
+        $info->album()  || 'No album',
+    );
+}
+
+my $tabulate =  Text::Tabulate->new(
+    gutter  => '|', 
+    joint   => "\n",
+);
+
+print $tabulate->format("Track\tTitle\tArtist\tAlbum", @lines) . "\n";

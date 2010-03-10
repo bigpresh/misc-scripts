@@ -1,0 +1,31 @@
+Simple Perl script to display ID3 tags from given files.
+
+Usage:
+
+    show-tags [dir]
+
+Given a directory name, will show the ID3 tags for all files in that dir.
+
+If no dir is given, all files in the current directory will be shown instead.
+
+Example:
+
+    [davidp@supernova:~]$ show-tags
+    /shared/music/Complete\ Albums/Oasis\ -\ The\ Masterplan
+    Track|Title                 |Artist|Album
+    1    |Acquiesce             |Oasis |The Masterplan
+    2    |Underneath The Sky    |Oasis |The Masterplan
+    3    |Talk Tonight          |Oasis |The Masterplan
+    4    |Going Nowhere         |Oasis |The Masterplan
+    5    |Fade Away             |Oasis |The Masterplan
+    6    |The Swamp Song        |Oasis |The Masterplan
+    7    |I Am The Walrus (Live)|Oasis |The Masterplan
+    8    |Listen Up             |Oasis |The Masterplan
+    9    |Rockin' Chair         |Oasis |The Masterplan
+    10   |Half The World Away   |Oasis |The Masterplan
+    11   |(It's Good) To Be Free|Oasis |The Masterplan
+    12   |Stay Young            |Oasis |The Masterplan
+    13   |Headshrinker          |Oasis |The Masterplan
+    14   |The Masterplan        |Oasis |The Masterplan
+
+
