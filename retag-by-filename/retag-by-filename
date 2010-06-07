@@ -17,6 +17,7 @@ use File::Basename;
 my @option_specs = (
     Getopt::Lucid::Switch('verbose|v'),
     Getopt::Lucid::Switch('dry-run|dryrun|d'),
+    Getopt::Lucid::List('set-only|setonly|s'),
     Getopt::Lucid::Param('pattern|p')->required(),
 );
 my $opt = Getopt::Lucid->getopt(\@option_specs);
@@ -40,8 +41,11 @@ for my $file (@files) {
             { quiet => ! $opt->get_verbose });
         $tags->get_tag or warn "Failed to read tags for $filename" && next;
         for my $tag(qw(track title artist comment)) {
-            say "Setting $tag" if $opt->get_verbose;
-            $tags->$tag( $+{$tag} || '');
+            if (!$opt->get_set_only || grep { $_ eq $tag } $opt->get_set_only) {
+                my $tag_val = $+{$tag} || '';
+                say "Setting $tag to '$tag_val'" if $opt->get_verbose;
+                $tags->$tag($tag_val);
+            }
         }
         $tags->set_tag or warn "Failed to set tags for $filename" && next;
         $tags->close;
