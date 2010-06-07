@@ -32,7 +32,7 @@ for my $file (@files) {
     my $filename = File::Basename::basename($file);
     
     if ($filename =~ $pattern) {
-        say "[$+{track}] $+{title} by $+{artist} ($+{comment})";
+        say "[$+{track}] "$+{title}" by "$+{artist}" ($+{comment})";
 
         next if ($opt->get_dry_run);
 
