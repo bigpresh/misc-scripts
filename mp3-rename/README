@@ -1,0 +1,15 @@
+
+mp3-rename
+
+Rename MP3 files based on their tags.
+
+Usage:
+
+    mp3-rename [dir]
+
+If dir is not given, looks at files in current directory.
+
+A list of proposed renames will be displayed, and you will be prompted whether
+to go ahead and perform them.
+
+

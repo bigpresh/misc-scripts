@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+
+# Rename MP3s in a given directory based on their ID3
+# tags.
+# 
+# David Precious, originally 10/04/2006
+#
+# TODO: if ID3 'track' tags not given, auto-number tracks
+#       based on the order we saw them in
+# TODO: extend to support Ogg Vorbis (.ogg) and MP4 files
+
+use strict;
+use File::Find::Rule;
+use File::Basename;
+use File::Spec;
+use Music::Tag;
+use Cwd;
+use Term::ReadKey;
+
+my $startdir = $ARGV[0] || getcwd;
+
+if (!-d $startdir) {
+    die "$startdir is not a directory";
+}
+
+my @files = File::Find::Rule->file()->name(qr{\.mp3$}i)->in($startdir);
+my %renames;
+
+file:
+for my $file (@files) {
+    my $info = Music::Tag->new($file);
+    ($info && $info->get_tag) or do {
+        print "Error reading ID3 tags for: $file\n";
+        $renames{$file} = $file;
+        next file;
+    };
+
+    $renames{$file} = File::Spec->catfile($startdir,  
+        join(' - ',
+            (sprintf('%02d',$info->track()),
+                clean($info->title()), &clean($info->artist())
+            )
+        ) . '.mp3'
+    );
+}
+
+# get the current screen width so we can work out column sizes:
+my $screen_width = (Term::ReadKey::GetTerminalSize)[0];
+my $col_width = int( ($screen_width - 5) / 2 );
+
+# see what the maximum filename length for the left side is - no point in
+# using half the screen for it if the longest entry is 15 chars.
+my $longest_title = (reverse sort { $a <=> $b } 
+                         map { length($_) }
+                         map { File::Basename::fileparse($_) } keys %renames)[0];
+
+# and now decide what to make the col widths:
+my ($left_col, $right_col);
+
+if ($longest_title < $col_width) {
+    $left_col = $longest_title;
+    $right_col = $col_width + ($col_width - $longest_title);
+} else {
+    $left_col = $right_col = $col_width;
+}
+
+
+print "The following renames will be performed:\n";
+
+for my $ren (sort keys %renames) {
+        # We only want to show the filenames
+        # TODO: do this in a more cross-platform way
+        my $from = File::Basename::fileparse($ren);
+        my $to   = File::Basename::fileparse($renames{$ren});;
+	printf "%- ${left_col}s -> %- ${right_col}s\n", 
+	    substr($from, 0, $left_col), substr($to, 0, $right_col);
+}
+
+print qq[
+Review the above renames to check the info is correct.
+
+Type 'yes' to go ahead: ?> ];
+
+my $foo = <STDIN>;
+
+if ($foo =~ /yes/i) {
+    for my $ren (keys %renames) {
+	rename($ren, $renames{$ren});
+    }
+
+} else {
+    print "No renames performed.\n";
+}
+
+
+
+sub clean {
+    # remove anything that's not good for a filename, and trim any leading or
+    # trailing whitespace
+
+    my $in = shift;
+    $in =~ s/[^a-z0-9_&+ -]//gi;
+    $in =~ s/(^\s+|\s+$)//g;
+    return $in;
+} # end of sub clean
