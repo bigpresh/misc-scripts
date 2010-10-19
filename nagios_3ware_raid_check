@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+# A simple Nagios plugin to monitor the status of a RAID array on a 3ware RAID
+# card, using the 3ware tw_cli utility (downloadable from 3ware's site)
+#
+# Not tested on boxes with multiple RAID arrays.
+#
+# David Precious <davidp@preshweb.co.uk>
+#
+# Released under the WTFPL licence, see http://sam.zoy.org/wtfpl/ for terms.
+
+use strict;
+use Nagios::Plugin;
+use FileHandle;
+
+my $np = Nagios::Plugin->new(
+    shortname => "RAIDCHECK",
+);
+
+my $statusfh = FileHandle->new('sudo tw_cli info c0 u0 |')
+    or $np->nagios_die("Can't get RAID status via tw_cli command - $!");
+
+my ($statusline) = grep { / RAID-\d+ /x } $statusfh->getlines;
+$statusfh->close;
+
+my ($type, $status, $completion, $comp2, $size) =
+    $statusline =~ m{^
+        u0 \s+
+        (RAID-\d+) \s+   # RAID type
+        (\S+) \s+        # Status
+        (\S+) \s+        # Completion percentage or -
+        (\S+) \s+        # Completion percentage or -
+        \S+ \s+          # Port (don't care)
+        \S+ \s+          # Stripe (don't care)
+        (\S+)            # Size
+    }x
+    or $np->nagios_die("Failed to parse output of tw_cli");
+
+$size = int $size;
+
+my $statusnum;
+if ($status eq 'OK') {
+    $np->nagios_exit(OK, "$type $status (${size}GB)");
+} elsif ($status =~ /REBUILDING|INITIALIZING/) {
+    $np->nagios_exit(WARNING, "$type $status ${completion}%");
+} else {
+    $np->nagios_exit(UNKNOWN, "Unrecognised RAID status $status");
+}
+
