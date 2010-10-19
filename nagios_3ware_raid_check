@@ -8,6 +8,11 @@
 # David Precious <davidp@preshweb.co.uk>
 #
 # Released under the WTFPL licence, see http://sam.zoy.org/wtfpl/ for terms.
+#
+# You'll need to allow the user that the Nagios NRPE daemon runs as to execute
+# the tw_cli command as root via sudo.
+# e.g., add the following to sudoers :
+# nagios  ALL=  NOPASSWD: /usr/local/bin/tw_cli
 
 use strict;
 use Nagios::Plugin;
