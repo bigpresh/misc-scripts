@@ -28,7 +28,7 @@ my $statusfh = FileHandle->new('sudo tw_cli info c0 u0 |')
 my ($statusline) = grep { / RAID-\d+ /x } $statusfh->getlines;
 $statusfh->close;
 
-my ($type, $status, $completion, $comp2, $size) =
+my ($type, $status, $completion, $completion2, $size) =
     $statusline =~ m{^
         u0 \s+
         (RAID-\d+) \s+   # RAID type
@@ -47,7 +47,10 @@ my $statusnum;
 if ($status eq 'OK') {
     $np->nagios_exit(OK, "$type $status (${size}GB)");
 } elsif ($status =~ /REBUILDING|INITIALIZING/) {
-    $np->nagios_exit(WARNING, "$type $status ${completion}%");
+    # There are two percentage columns, I'm not entirely sure which is used in
+    # which situation
+    my $complete = $completion eq '-' ? $completion : $completion2;
+    $np->nagios_exit(WARNING, "$type $status ${complete}%");
 } else {
     $np->nagios_exit(UNKNOWN, "Unrecognised RAID status $status");
 }
