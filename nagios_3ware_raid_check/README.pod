@@ -1,0 +1,49 @@
+=head1 nagios_3ware_raid_check
+
+=head2 DESCRIPTION
+
+This is a simple Nagios plugin to monitor the state of a RAID array on a 3ware
+RAID card, using 3ware's C<tw_cli> utility, which you can download from 3ware's
+site (see below).
+
+Currently, the plugin only checks the status of the first array on the first
+RAID card.  I've not had the opportunity to test it on machines with multiple
+cards / multiple arrays.  Supporting those would be easy enough by allowing the
+plugin to take options to specify the card and "unit" (array) - if you need
+that, let me know and I might just add it :)
+
+=head2 REQUIREMENTS
+
+Besides the obvious (Nagios/NRPE, Perl, and and the C<Nagios::Plugin> module
+from CPAN), you'll also need 3ware's C<tw_cli> utility.
+
+=head3 tw_cli utility from 3ware/LSI
+
+You can download tw_cli from the 3ware (now LSI) website, for instance:
+
+http://www.lsi.com/channel/products/raid_controllers/sata_sas/3ware_9690sa4i/index.html
+
+It appears to be compatible with most cards, so you don't have to pick the
+specific card you have from the list.
+
+
+=head3 sudo setup
+
+You probably don't want to be running your Nagios plugins as root.  However,
+tw_cli needs to run as root.  So, this script uses sudo to execute tw_cli as
+root.
+
+You'll need to allow this to happen with no password.  For security, I'd only
+allow the nagios user to run the tw_cli command - add something like this to
+the C<sudoers> file:
+
+  nagios  ALL=  NOPASSWD: /usr/local/bin/tw_cli
+
+
+=head1 AUTHOR
+
+David Precious <davidp@preshweb.co.uk>
+
+
+
+
