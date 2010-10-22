@@ -49,7 +49,7 @@ if ($status eq 'OK') {
 } elsif ($status =~ /REBUILDING|INITIALIZING/) {
     # There are two percentage columns, I'm not entirely sure which is used in
     # which situation
-    my $complete = $completion eq '-' ? $completion : $completion2;
+    my $complete = $completion eq '-' ? $completion2 : $completion;
     $np->nagios_exit(WARNING, "$type $status ${complete}%");
 } else {
     $np->nagios_exit(UNKNOWN, "Unrecognised RAID status $status");
