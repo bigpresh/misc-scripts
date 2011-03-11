@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+# Basic MySQL backups - dumps all databases to text files with mysqldump.
+# Intended to be run from root's crontab, with DB auth details in root's .my.cnf
+# file.
+
+use strict;
+use DirHandle;
+use DateTime;
+
+my $mysql_data_dir = '/var/lib/mysql';
+my $backups_dir = '/var/backups/sql';
+
+
+my $dirh = new DirHandle $mysql_data_dir
+    or die "Failed to read mysql data directory $mysql_data_dir - $!";
+
+while (my $dbname = $dirh->read) {
+    next if (! -d "$mysql_data_dir/$dbname");
+    next if ($dbname eq '.' || $dbname eq '..');
+    print "Need to back up $dbname\n";
+    my $dt = DateTime->now;
+    my $datetime = $dt->ymd . '_' . $dt->hms;
+    `mysqldump -icf  $dbname > $backups_dir/$dbname-$datetime.sql`;
+}

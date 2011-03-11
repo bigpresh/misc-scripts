@@ -1,0 +1,5 @@
+mysqldump-backups
+
+Simple script to run from cron and back up all MySQL databases using mysqldump.
+
+
