@@ -24,7 +24,7 @@ my $np = Nagios::Plugin->new(
 );
 
 $np->add_arg(
-    spec => "debug|d",
+    spec => "verbose|v",
     help => "Print debug information",
 );
 $np->add_arg(
