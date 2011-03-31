@@ -3,7 +3,8 @@
 # A simple Nagios plugin to monitor the status of a RAID array on a 3ware RAID
 # card, using the 3ware tw_cli utility (downloadable from 3ware's site)
 #
-# Not tested on boxes with multiple RAID arrays.
+# For new versions, check GitHub:
+# https://github.com/bigpresh/misc-scripts/tree/master/nagios_3ware_raid_check
 #
 # David Precious <davidp@preshweb.co.uk>
 #

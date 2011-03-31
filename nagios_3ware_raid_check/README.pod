@@ -54,10 +54,16 @@ binary/script named C<tw_cli> which appeared in some other directory earlier
 in your $PATH.
 
 
+=head1 CONTRIBUTING / NEW VERSIONS
+
+This plugin is developed on GitHub at:
+
+L<https://github.com/bigpresh/misc-scripts/tree/master/nagios_3ware_raid_check>
+
+Patches / bug reports / feedback welcome.
+
 =head1 AUTHOR
 
 David Precious <davidp@preshweb.co.uk>
-
-
 
 
