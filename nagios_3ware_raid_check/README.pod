@@ -6,11 +6,13 @@ This is a simple Nagios plugin to monitor the state of a RAID array on a 3ware
 RAID card, using 3ware's C<tw_cli> utility, which you can download from 3ware's
 site (see below).
 
-Currently, the plugin only checks the status of the first array on the first
-RAID card.  I've not had the opportunity to test it on machines with multiple
-cards / multiple arrays.  Supporting those would be easy enough by allowing the
-plugin to take options to specify the card and "unit" (array) - if you need
-that, let me know and I might just add it :)
+The plugin automatically determines which 3ware/LSI RAID controller cards are
+present, and which RAID arrays are configured, and checks the status of each.
+
+This means it can happily support monitoring of multiple controller cards and
+RAID arrays, and does not need to be told which card number / unit number to
+monitor - it will just Do The Right Thing.
+
 
 =head2 REQUIREMENTS
 
@@ -37,7 +39,19 @@ You'll need to allow this to happen with no password.  For security, I'd only
 allow the nagios user to run the tw_cli command - add something like this to
 the C<sudoers> file:
 
-  nagios  ALL=  NOPASSWD: /usr/local/bin/tw_cli
+  nagios  ALL=  NOPASSWD: /usr/local/sbin/tw_cli
+
+By default, this plugin expects to find the tw_cli binary in your $PATH.  If you
+can run `sudo tw_cli` yourself and get output, it should work.  However, if you
+need to, you can provide the path to the tw_cli binary using the `--tw_cli`
+option, e.g.:
+
+    ./nagios-3ware-raid-check --tw_cli=/path/to/tw_cli
+
+This may be a good idea anyway, to ensure that the binary that the plugin
+executes (as root, remember!) is the one you expect, and not some other
+binary/script named tw_cli which appeared in some other directory earlier in
+your $PATH.
 
 
 =head1 AUTHOR
