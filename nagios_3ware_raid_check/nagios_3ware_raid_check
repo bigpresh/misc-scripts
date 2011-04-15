@@ -67,7 +67,7 @@ for my $cardinfo (@cards) {
 
         my ($unit, $type, $status, $completion, $completion2, $size) =
             $arrayinfo =~ m{^
-                (u\d+) \s+
+                (u\d+) \s+       # Logical unit (array)
                 (RAID-\d+) \s+   # RAID type
                 (\S+) \s+        # Status
                 (\S+) \s+        # Completion percentage or -
