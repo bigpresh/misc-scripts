@@ -6,7 +6,7 @@
 package Bot::BasicBot::Pluggable::Module::GitHubPullRequests;
 use strict;
 use base 'Bot::BasicBot::Pluggable::Module';
-use LWP::Simple;
+use LWP::Simple ();
 use JSON;
 
 sub help {
@@ -24,10 +24,22 @@ sub said {
     
     #return unless $pri == 2;
 
-    if ($mess->{body} =~ /!pr \s* (\S+)?/xi) {
-        my $check_projects = $1 || $self->get('monitor_projects');
+    if ($mess->{body} =~ /!pr (?: \s+ (\S+))?/xi) {
+        my $check_projects = $1;
+        $check_projects ||=  $self->get('user_monitor_projects');
+        if (!$check_projects) {
+            $self->reply(
+                $mess, 
+                "No project(s) to check; either specify"
+                . " a project, e.g. '!pr username/project', or use the Vars"
+                . " module to configure the monitor_projects setting for this"
+                . " module to set the default project to check."
+            );
+            return 1;
+        }
+        $self->reply($mess, "OK, I'll check for PRs on $check_projects");
         for my $project (split /,/, $check_projects) {
-            my $prs = _get_pull_request_count($project);
+            my $prs = $self->_get_pull_request_count($project);
             $self->say(
                 channel => $mess->{channel},
                 body => "Open pull requests for $project : $prs",
@@ -40,7 +52,7 @@ sub said {
 
 
 sub _get_pull_request_count {
-    my $project = shift;
+    my ($self, $project) = @_;
     my $url = "http://github.com/api/v2/json/pulls/" . $project;
     my $json = LWP::Simple::get($url)
         or return "Unknown - error fetching $url";
