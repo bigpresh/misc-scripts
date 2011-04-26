@@ -21,15 +21,12 @@ HELPMSG
 
 sub said {
     my ($self, $mess, $pri) = @_;
-    warn "Saw $mess->{body} at priority $pri";
     
     #return unless $pri == 2;
 
     if ($mess->{body} =~ /!pr \s* (\S+)?/xi) {
         my $check_projects = $1 || $self->get('monitor_projects');
-        warn "Projects to check: $check_projects";
         for my $project (split /,/, $check_projects) {
-            warn "Checking PRs for $project";
             my $prs = _get_pull_request_count($project);
             $self->say(
                 channel => $mess->{channel},
