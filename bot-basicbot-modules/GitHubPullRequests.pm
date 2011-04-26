@@ -22,9 +22,9 @@ HELPMSG
 sub said {
     my ($self, $mess, $pri) = @_;
     
-    #return unless $pri == 2;
+    return unless $pri == 2;
 
-    if ($mess->{body} =~ /!pr (?: \s+ (\S+))?/xi) {
+    if ($mess->{body} =~ /^!pr (?: \s+ (\S+))?/xi) {
         my $check_projects = $1;
         $check_projects ||=  $self->get('user_monitor_projects');
         if (!$check_projects) {
@@ -37,7 +37,6 @@ sub said {
             );
             return 1;
         }
-        $self->reply($mess, "OK, I'll check for PRs on $check_projects");
         for my $project (split /,/, $check_projects) {
             my $prs = $self->_get_pull_request_count($project);
             $self->say(
@@ -47,7 +46,7 @@ sub said {
         }
         return 1; # "swallow" this message
     }
-    return; # This message didn't interest us
+    return 0; # This message didn't interest us
 }
 
 
