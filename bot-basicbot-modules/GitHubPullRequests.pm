@@ -13,8 +13,12 @@ sub help {
     return <<HELPMSG;
 Monitors outstanding pull requests on a GitHub project.
 
-Allows use of a !pr command to fetch the current count of open pull requests,
-and can also periodically announce them on a timer.
+Allows use of a !pr command to fetch the current count of open pull requests
+including a tally by user.
+
+Usage: !pr user/project, or just !pr for the default project, configured by
+setting the 'github_project' setting using the Vars module (or by directly
+setting the user_github_project setting in the bot's store).
 HELPMSG
 }
 
@@ -26,13 +30,13 @@ sub said {
 
     if ($mess->{body} =~ /^!pr (?: \s+ (\S+))?/xi) {
         my $check_projects = $1;
-        $check_projects ||=  $self->get('user_monitor_projects');
+        $check_projects ||=  $self->get('user_github_project');
         if (!$check_projects) {
             $self->reply(
                 $mess, 
                 "No project(s) to check; either specify"
                 . " a project, e.g. '!pr username/project', or use the Vars"
-                . " module to configure the monitor_projects setting for this"
+                . " module to configure the github_project setting for this"
                 . " module to set the default project to check."
             );
             return 1;
