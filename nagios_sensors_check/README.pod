@@ -1,0 +1,20 @@
+=head1 nagios_sensors_check
+
+=head2 DESCRIPTION
+
+A simple Nagios plugin to monitor selected hardware sensors values
+(temperatures, fan speeds, voltages) from the output of the lm_sensors
+C<sensors> utility.
+
+Allows you to select only the readings you want to monitor, and easily set
+acceptable thresholds.
+
+Avoids the headache of configuring lm_sensors to use sensible thresholds and
+alarms.
+
+Also, provides useful information so you can see what the values are, rather
+than just "ok" or "alarm", as the standard Nagios C<check_sensors> plugin seems
+to provide.
+
+
+

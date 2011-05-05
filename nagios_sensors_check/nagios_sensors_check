@@ -1,0 +1,100 @@
+#!/usr/bin/perl
+
+# Dirt-simple plugin to monitor values of system sensors using lm-sensors
+# easily.
+#
+# I wrote this because, on several boxes I was monitoring, the thresholds for
+# various sensors were silly, and the lm-sensors configuration is hairy!
+#
+# Also, the Nagios check_sensors plugin simply reports e.g. "Sensor alarm
+# detected" rather than useful information, like which sensor(s) are playing up.
+#
+# David Precious <davidp@preshweb.co.uk>
+
+use strict;
+use Nagios::Plugin;
+use FileHandle;
+
+my $np = Nagios::Plugin->new(
+    shortname => "CHECKSENSOR",
+    usage => "%s -s/--sensor -w threshold -c threshold",
+);
+
+$np->add_arg(
+    spec => "sensor|s=s@",
+    help => "sensor name:min:max - e.g. 'CPU Temp:15:65'.  Repeat as needed",
+    required => 1,
+);
+$np->add_arg(
+    spec => "warning|w=f",
+    help => "Warning threshold in percent; values that exceed a threshold"
+        . " by this amount or less result in a warning",
+    default => 10,
+);
+$np->add_arg(
+    spec => "sensorscmd|c=s",
+    help => "Path to sensors command (optional, defaults to 'sensors')",
+    default => "sensors",
+);
+
+$np->getopts;
+my $warning = $np->opts->warning / 100;
+
+my %sensorvalue;
+my $sensorsfh = FileHandle->new($np->opts->sensorscmd . ' |')
+    or $np->nagios_die(
+        "Can't execute " . $np->opts->sensorscmd . " - $!"
+    );
+while (my $line = $sensorsfh->getline) {
+    if (my ($sensor,$value) = $line =~ m{(.+) : \s+ (\S+)}x) {
+        $sensorvalue{$sensor} = $value;
+    }
+}
+$sensorsfh->close;
+
+
+# Remember any values which exceed the thresholds, so we can exit with the worst
+# status seen at the end,
+my (@critical, @warning, @ok);
+sensor:
+for my $sensorspec (@{ $np->opts->sensor }) {
+    my ($sensor, $min_thres, $max_thres) = split /:/, $sensorspec;
+    if (!defined $sensorvalue{$sensor}) {
+        push @critical, "No value for $sensor";
+        next sensor;
+    }
+    my $value = $sensorvalue{$sensor};
+    (my $rawvalue = $value) =~ s/[^0-9.]//g;
+
+    # First, see if it's outside the warning tolerance either side of the
+    # thresholds - if so, it's a critical problem:
+    if (($rawvalue < $min_thres - ($min_thres * $warning))
+        ||
+        ($rawvalue > $max_thres + ($max_thres * $warning)))
+    {
+        push @critical, "$sensor $value";
+        next sensor;
+    }
+
+    # OK, if it's outside the thresholds, but we didn't catch it above, then
+    # it's within the warning tolerances, so only a warning:
+    if ($rawvalue < $min_thres || $rawvalue > $max_thres) {
+        push @warning, "$sensor $value";
+        next sensor;
+    }
+
+    # OK, it must be fine.
+    push @ok, "$sensor $value";
+}
+
+# Assemble all problematic readings, critical ones first:
+# TODO: refactor, DRY
+my @problems = (@critical, @warning);
+if (@critical) {
+    $np->nagios_exit(CRITICAL, join ', ', @problems);
+} elsif (@warning) {
+    $np->nagios_exit(WARNING, join ', ', @problems);
+} else {
+    $np->nagios_exit(OK, join ', ', @ok);
+}
+
