@@ -1,5 +1,9 @@
 =head1 nagios_sensors_check
 
+=head2 SYNOPSIS
+
+    ./nagios_sensors_check --sensor 'CPU Temp:0:60' --sensor 'fan1:1000:8000'
+
 =head2 DESCRIPTION
 
 A simple Nagios plugin to monitor selected hardware sensors values
