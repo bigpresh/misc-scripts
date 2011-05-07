@@ -85,7 +85,7 @@ for my $cardinfo (@cards) {
 
 
         my $statusnum;
-        if ($status eq 'OK') {
+        if ($status =~ /OK|VERIFYING/) {
             push @ok, "Card $card unit $unit $type $status (${size}GB)";
         } elsif ($status =~ /REBUILDING|INITIALIZING/) {
             # There are two percentage columns, I'm not entirely sure which is used in
