@@ -1,0 +1,18 @@
+backup-google-stuff.pl
+
+A quick and dirty script I use to back up stuff from my Google account
+(contacts, calendar, Google Reader subscriptions).
+
+I figured I should share this after discussions on Twitter about backing up
+stuff stored with Google, in case it's of help to others.
+
+It's a Perl script that logs in to Google and exports stuff via Google's export
+mechanisms.
+
+It's fairly basic as I just rocked it up for my own use, but I may extend it in
+future, make it easier to configure and use, and perhaps add support for backing
+up other Google-hosted data (Google Plus, perhaps).
+
+David Precious <davidp@preshweb.co.uk>
+
+
