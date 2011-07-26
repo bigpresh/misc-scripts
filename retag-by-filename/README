@@ -1,4 +1,4 @@
-Retag auto files based on their filenames.
+Retag audio files based on their filenames.
 
 Given a pattern with named captures, set the ID tags for each named file based
 on that pattern.
