@@ -14,7 +14,7 @@
 
 # Path to a directory containing per-app config files.
 APPCFGDIR=/etc/dancer
-
+STARMANBIN=/usr/local/bin/starman
 
 # Each Dancer application should have a config file in the directory named
 # above, containing the following settings:
@@ -50,7 +50,7 @@ start_app() {
     source $APPCFGDIR/$APP_NAME;
     start-stop-daemon --start --chuid $USER --chdir $DIR \
         --pidfile=$PIDFILE \
-        --exec starman -- -p $PORT $SCRIPT -D --pid $PIDFILE \
+        --exec $STARMANBIN -- -p $PORT $SCRIPT -D --pid $PIDFILE \
         $STARMAN_OPTS
     echo "(pid: $!)";
 }
