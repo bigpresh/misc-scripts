@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+
+# Nagios plugin to monitor the time since the current mirror increment on an
+# rdiff-backup destination.
+#
+# David Precious <davidp@preshweb.co.uk>
+
+use strict;
+use Nagios::Plugin;
+use FileHandle;
+use Time::Duration;
+
+my $np = Nagios::Plugin->new(
+    shortname => "CHECKRDIFFBACKUP",
+    usage => "%s -w 4h -c 12h -d /path/to/backup",
+);
+
+$np->add_arg(
+    spec => "warning|w=s",
+    help => "Warning threshold (e.g. 3h)",
+    default => '6h',
+);
+$np->add_arg(
+    spec => "critical|c=s",
+    help => "Critical threshold (e.g. 6h)",
+    default => '24h',
+);
+$np->add_arg(
+    spec => "dest|d=s",
+    help => "Path to backup destination",
+    required => 1,
+);
+$np->add_arg(
+    spec => 'rdiff_backup|idiff-backup|r=s',
+    help => "Path to rdiff-backup",
+    default => 'rdiff-backup',
+);
+
+$np->getopts;
+
+# Basic sanity checking first:
+if (! -d $np->opts->dest) {
+    $np->nagios_die(
+        sprintf "Backup destination '%s' does not exist!", $np->opts->dest
+    );
+}
+
+my $sensorsfh = FileHandle->new(
+    $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest . ' |'
+) or $np->nagios_die(
+    "Can't execute " . $np->opts->rdiff_backup . " - $!"
+);
+my $last_mirror;
+while (my $line = $sensorsfh->getline) {
+    $last_mirror = (split /\s/, $line)[0];
+}
+$sensorsfh->close;
+
+if (!$last_mirror) {
+    $np->nagios_die("Failed to determine time since last mirror");
+}
+
+
+# Turn our thresholds into seconds:
+my $warning_secs  = $np->opts->warning;
+my $critical_secs = $np->opts->critical;
+my %suffixes = ( m => 60, h => 60 * 60, d => 60 * 60 * 24);
+for my $suffix (keys %suffixes) {
+    for ($warning_secs, $critical_secs) {
+        $_ *= $suffixes{suffix} if $_ =~ s/$suffix$//;
+    }
+}
+
+my $secs_since_mirror = time - $last_mirror;
+
+# And finally, check against them:
+$np->nagios_exit(
+    return_code => $np->check_threshold(
+        check    => $secs_since_mirror,
+        warning  => $warning_secs,
+        critical => $critical_secs,
+    ),
+    message => sprintf "Last backup completed %s ago",
+        Time::Duration::duration($secs_since_mirror),
+);
+
+

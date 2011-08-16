@@ -1,0 +1,28 @@
+=head1 nagios_rdiffbackup_check
+
+=head2 SYNOPSIS
+
+    ./nagios_rdiffbackup_check -w 6h -c 12h -d /path/to/destination
+
+=head2 DESCRIPTION
+
+A simple Nagios plugin to check how recent the current mirror increment of an
+L<http://www.rdiff-backup.org/|rdiff-backup> destination is.
+
+The C<-w / --warning> and C<-c / --critical> options set the warning and
+critical threshold values for the maximum time since last mirror increment.
+
+They can be given in seconds, or with logical suffixes - C<m> for minutes, C<h>
+for hours, C<d> for days.
+
+The C<-d / --dest> option specifies the directory to which rdiff-backup has been
+backing up.
+
+The optional C<--rdiff-backup> option sets the path to the C<rdiff-backup>
+script; by default, just C<rdiff-backup> will be used, which will work assuming
+that C<rdiff-backup> is found in C<$PATH>.
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
