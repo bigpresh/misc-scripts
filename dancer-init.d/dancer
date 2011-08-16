@@ -22,7 +22,7 @@ STARMANBIN=/usr/local/bin/starman
 #SCRIPT=bin/app.pl
 #PORT=5000  
 #USER=davidp
-#PIDFILE=/var/run/site-$SITENAME.pid
+#PIDFILE=/var/run/myapp.pid
 
 
 start() {
@@ -45,32 +45,29 @@ stop() {
 
 start_app() {
     APP_NAME=$1;
-    echo -n "Starting Dancer application '$APP_NAME'";
+    echo "Starting Dancer application '$APP_NAME'";
     # Read the vars we're going to use from the app config
     source $APPCFGDIR/$APP_NAME;
     start-stop-daemon --start --chuid $USER --chdir $DIR \
         --pidfile=$PIDFILE \
         --exec $STARMANBIN -- -p $PORT $SCRIPT -D --pid $PIDFILE \
         $STARMAN_OPTS
-    echo "(pid: $!)";
 }
 
 stop_app() {
     APP_NAME=$1
-    echo -n "Stopping Dancer application '$APP_NAME'";
+    echo "Stopping Dancer application '$APP_NAME'";
     source $APPCFGDIR/$APP_NAME;
     start-stop-daemon --stop --pidfile $PIDFILE
 }
 
 start_all_apps() {
     for APP in `ls -1 $APPCFGDIR`; do
-        echo "Starting Dancer application '$APP'";
         start_app $APP;
     done
 }
 stop_all_apps() {
     for APP in `ls -1 $APPCFGDIR`; do
-        echo "Stopping Dancer application '$APP'";
         stop_app $APP;
     done
 }
