@@ -1,0 +1,99 @@
+#! /bin/sh
+
+# Simple init.d script to start/stop Dancer appliactions on Debian boxes.
+# Originally written by David Precious <davidp@preshweb.co.uk>
+
+### BEGIN INIT INFO
+# Provides:          dancer
+# Required-Start:    $network $local_fs
+# Required-Stop:     $network $local_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6                                                                                                        
+# Short-Description: Dancer web framework sites
+### END INIT INFO
+
+# Path to a directory containing per-app config files.
+APPCFGDIR=/etc/dancer
+
+
+# Each Dancer application should have a config file in the directory named
+# above, containing the following settings:
+#DIR=/path/to/myappdir
+#SCRIPT=bin/app.pl
+#PORT=5000  
+#USER=davidp
+#PIDFILE=/var/run/site-$SITENAME.pid
+
+
+start() {
+    if test -z "$1"; then
+        echo "Starting all Dancer applications...";
+        start_all_apps();
+    else
+        start_app($1);
+    fi
+}
+
+stop() {
+    if test -z "$1"; then
+        echo "Stopping all Dancer applications..."
+        stop_all_apps();
+    else
+        stop_app($1);
+    fi
+}
+
+start_app() {
+    APP_NAME=$1;
+    echo -n "Starting Dancer application '$APP_NAME'";
+    # Read the vars we're going to use from the app config
+    source $APPCFGDIR/$APP_NAME;
+    start-stop-daemon --start --chuid $USER --chdir $DIR \
+        --pidfile=$PIDFILE \
+        --exec starman -- -p $PORT $SCRIPT -D --pid $PIDFILE \
+        $STARMAN_OPTS
+    echo "(pid: $!)";
+}
+
+stop_app() {
+    APP_NAME=$1
+    echo -n "Stopping Dancer application '$APP_NAME'";
+    source $APPCFGDIR/$APP_NAME;
+    start-stop-daemon --stop --pidfile $PIDFILE
+}
+
+start_all_apps() {
+    for APP in `ls -1 $APPCFGDIR`; do
+        echo "Starting Dancer application '$APP'";
+        start_app($APP);
+    done
+}
+stop_all_apps() {
+    for APP in `ls -1 $APPCFGDIR`; do
+        echo "Stopping Dancer application '$APP'";
+        stop_app($APP);
+    done
+}
+
+
+
+case "$1" in
+    start)
+        start($2);
+    ;;
+
+    stop)
+        stop($2);
+    ;;
+    restart)
+        stop($2);
+        start($2);
+    ;;
+    *)
+	echo "Usage: $SCRIPTNAME {start|stop|restart} [appname]" >&2
+	exit 3
+	;;
+esac
+
+
+

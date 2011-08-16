@@ -1,0 +1,23 @@
+A simple way to run Dancer applications  under Starman on Debian machines.
+
+This was cobbled together for me own use, but I've put it here in case it's
+useful to others.
+
+Usage:
+
+ - copy 'dancer'  to /etc/init.d and make it executable
+
+ - run update-rc.d dancer defaults
+   (This sets up symlinks to start/stop apps at boot/shutdown)
+
+ - mkdir /etc/dancer
+   (This dir contains app config files)
+
+ - in /etc/dancer, create a file for each app, one per line, containing:
+DIR=/path/to/myapp
+SCRIPT=bin/app.pl
+USER=davidp
+PORT=5000  
+PIDFILE=/var/run/site-$SITENAME.pid
+
+
