@@ -60,7 +60,7 @@ my $critical_secs = $np->opts->critical;
 my %suffixes = ( m => 60, h => 60 * 60, d => 60 * 60 * 24);
 for my $suffix (keys %suffixes) {
     for ($warning_secs, $critical_secs) {
-        $_ *= $suffixes{suffix} if $_ =~ s/$suffix$//;
+        $_ *= $suffixes{$suffix} if $_ =~ s/$suffix$//;
     }
 }
 
@@ -70,8 +70,8 @@ my $secs_since_mirror = time - $last_mirror;
 $np->nagios_exit(
     return_code => $np->check_threshold(
         check    => $secs_since_mirror,
-        warning  => "$warning_secs:",
-        critical => "$critical_secs:",
+        warning  => "$warning_secs",
+        critical => "$critical_secs",
     ),
     message => sprintf "Last backup completed %s ago",
         Time::Duration::duration($secs_since_mirror),
