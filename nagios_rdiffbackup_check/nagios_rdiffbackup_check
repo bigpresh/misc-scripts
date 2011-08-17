@@ -31,7 +31,7 @@ $np->add_arg(
     required => 1,
 );
 $np->add_arg(
-    spec => 'rdiff_backup|idiff-backup|r=s',
+    spec => 'rdiff_backup|diff-backup|r=s',
     help => "Path to rdiff-backup",
     default => 'rdiff-backup',
 );
