@@ -38,16 +38,16 @@ $np->add_arg(
 
 $np->getopts;
 
-my $sensorsfh = FileHandle->new(
+my $rdfh = FileHandle->new(
     $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest . ' |'
 ) or $np->nagios_die(
     "Can't execute " . $np->opts->rdiff_backup . " - $!"
 );
 my $last_mirror;
-while (my $line = $sensorsfh->getline) {
+while (my $line = $rdfh->getline) {
     $last_mirror = (split /\s/, $line)[0];
 }
-$sensorsfh->close;
+$rdfh->close;
 
 if (!$last_mirror) {
     $np->nagios_die("Failed to determine time since last mirror");
