@@ -77,8 +77,8 @@ my $secs_since_mirror = time - $last_mirror;
 $np->nagios_exit(
     return_code => $np->check_threshold(
         check    => $secs_since_mirror,
-        warning  => $warning_secs,
-        critical => $critical_secs,
+        warning  => "$warning_secs:",
+        critical => "$critical_secs:",
     ),
     message => sprintf "Last backup completed %s ago",
         Time::Duration::duration($secs_since_mirror),
