@@ -38,13 +38,6 @@ $np->add_arg(
 
 $np->getopts;
 
-# Basic sanity checking first:
-if (! -d $np->opts->dest) {
-    $np->nagios_die(
-        sprintf "Backup destination '%s' does not exist!", $np->opts->dest
-    );
-}
-
 my $sensorsfh = FileHandle->new(
     $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest . ' |'
 ) or $np->nagios_die(
