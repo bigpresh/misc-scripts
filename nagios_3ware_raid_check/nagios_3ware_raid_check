@@ -29,7 +29,7 @@ $np->add_arg(
     help => "Print debug information",
 );
 $np->add_arg(
-    spec => "tw_cli|tw-cli|t",
+    spec => "tw_cli|tw-cli|t=s",
     help => "Path to 3ware/LSI tw_cli binary",
     default => "tw_cli",
 );
