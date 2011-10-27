@@ -28,11 +28,15 @@ L<http://www.lsi.com/channel/products/raid_controllers/sata_sas/3ware_9690sa4i/i
 As that URL didn't work for me, at least with Javascript disabled, I've also
 mirrored the files for easy download:
 
-L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86-9.5.3.tgz>
-L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86_64-9.5.3.tgz>
+Linux (32 bit): L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86-9.5.3.tgz>
+
+Linux (64 bit): L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86_64-9.5.3.tgz>
 
 It appears to be compatible with most cards, so you don't have to pick the
 specific card you have from the list.
+
+Extract the tarball, and you'll find the C<tw_cli> util and man pages.  Make
+C<tw_cli> executable (C<chmod +x tw_cli>) then move it to C</usr/local/sbin/>.
 
 
 =head3 sudo setup
