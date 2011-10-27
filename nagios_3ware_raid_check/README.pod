@@ -23,7 +23,13 @@ from CPAN), you'll also need 3ware's C<tw_cli> utility.
 
 You can download tw_cli from the 3ware (now LSI) website, for instance:
 
-http://www.lsi.com/channel/products/raid_controllers/sata_sas/3ware_9690sa4i/index.html
+L<http://www.lsi.com/channel/products/raid_controllers/sata_sas/3ware_9690sa4i/index.html>
+
+As that URL didn't work for me, at least with Javascript disabled, I've also
+mirrored the files for easy download:
+
+L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86-9.5.3.tgz>
+L<http://www.preshweb.co.uk/downloads/tw_cli-linux-x86_64-9.5.3.tgz>
 
 It appears to be compatible with most cards, so you don't have to pick the
 specific card you have from the list.
