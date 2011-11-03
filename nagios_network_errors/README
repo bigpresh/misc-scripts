@@ -1,0 +1,13 @@
+nagios_network_errors
+
+A simple plugin for Nagios to monitor ifconfig's error counters and alert if the
+error counters are increasing.
+
+Usage: set it up in NRPE's config as per any other plugin.  Run the plugin
+with --help for details on the options available.
+
+
+TODO: more documentation.
+
+
+

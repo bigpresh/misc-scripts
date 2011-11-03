@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+
+# Nagios plugin to monitor for increasing network error stats via ifconfig.
+#
+# David Precious <davidp@preshweb.co.uk>
+use strict;
+use FileHandle;
+use Nagios::Plugin;
+use JSON;
+
+
+my $np = Nagios::Plugin->new(
+    shortname => 'CHECKNETERRORS',
+    'usage' => "%s -i eth0",
+);
+
+$np->add_arg(
+    spec    => "interface|i=s",
+    help    => "Network interface to monitor",
+    default => "eth0",
+);
+$np->add_arg(
+    spec    => "statefile|f=s",
+    help    => "File to record stats in",
+    default => "/var/state/nagios_network_errors",
+);
+$np->add_arg(
+    spec    => "critical|c=s",
+    help    => "More than this many errors since last run is critical",
+    default => 10,
+);
+$np->add_arg(
+    spec    => "warning|w=s",
+    help    => "More than this many errors since last run is warning",
+    default => 2,
+);
+
+$np->getopts;
+
+
+
+## Fetch the data we need:
+my $ifconfig_fh = FileHandle->new(
+    "/sbin/ifconfig " . $np->opts->interface . " |"
+) or $np->nagios_die("Can't execute ifconfig! - $!");
+
+my $ifconfig_output = join '',  $ifconfig_fh->getlines;
+my %stats;
+for my $dir (qw(RX TX)) {
+    my ($line) = $ifconfig_output =~ /^\s+($dir .+)/m;
+    $stats{$dir . '_' . $1} = $2      
+        while $line =~ m{(\w+):(\d+)}g;
+}
+$ifconfig_output =~ m{(collisions):(\d+)}g and $stats{$1} = $2;
+
+delete $stats{$_} for qw(RX_packets TX_packets);
+
+
+## If the state file doesn't exist, try to create it, bail if we can't:
+if (!-f $np->opts->statefile) {
+    open my $fh, '>', $np->opts->statefile
+        or $np->nagios_die(
+            "Can't create state file " . $np->opts->statefile . " - $!"
+        );
+}
+
+# Read in previous stats, then rewind the filehandle
+# ready to write updated stats to
+open my $state_fh, '+<', $np->opts->statefile
+    or $np->nagios_die("Failed to open " . $np->opts->statefile . " - $!");
+
+my $json = join '', <$state_fh>;
+
+my $previous_stats = $json ? JSON::from_json($json) : {};
+
+
+# Write the new data to the state file
+seek $state_fh, 0, 0;
+print {$state_fh} JSON::to_json(\%stats);
+close $state_fh;
+
+
+
+
+## For each counter, see if it's increased since the last time we checked:
+my %problems;
+for my $stat (keys %stats) {
+    if (exists $previous_stats->{$stat}) {
+        my $diff = $stats{$stat} - $previous_stats->{$stat};
+        my $error_type = $np->check_threshold(check => $diff);
+        if ($error_type) {
+            push @{ $problems{$error_type} }, "$stat increased by $diff";
+        }
+    }
+}
+
+## Finally, exit with appropriate return code and message
+for my $state (CRITICAL,WARNING) {
+    if (my $problems = $problems{$state}) {
+        $np->nagios_exit($state, join ", ", @$problems);
+    }
+}
+$np->nagios_exit(OK, "Error counters not increasing");
+
+
+
+
+
