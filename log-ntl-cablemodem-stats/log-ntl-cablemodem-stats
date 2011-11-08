@@ -11,7 +11,7 @@
 
 use strict;
 use DBI;
-use LWP::Simple;
+use LWP::UserAgent;
 use HTML::TableExtract;
 
 # Amend this to suit your database
@@ -30,25 +30,69 @@ my $modem = "192.168.100.1";
 my $sth = $dbh->prepare('INSERT INTO stats (`key`,`value`) VALUES(?,?)')
     or die "Failed to prepare INSERT query - " . $dbh->errstr;
 
+my $ua = LWP::UserAgent->new;
+$ua->credentials("$modem:80", "NTL", $user, $pass);
+
 # Fetch upstream/downstream stats
 for my $page (qw(CmDnstream.asp CmUpstream.asp)) {
-    my $html = LWP::Simple::get("http://$user:$pass\@$modem/$page")
-        or die "Failed to fetch $page from CM";
+    my $res = $ua->get("http://$modem/$page");
+    if (!$res->is_success) {
+        die "Failed to fetch $page from CM - " . $res->status_line;
+    }
 
     my $te = HTML::TableExtract->new(attribs => { width => 510, height => 300 });
-    $te->parse($html)
+    $te->parse($res->content)
         or die "Failed to parse HTML for table";
 
     my $table = $te->first_table_found
-        or die "No table matched - HTML: $html";
+        or die "No table matched";
     for my $row ($table->rows) {
         my ($key,$value) = @$row;
         $key =~ s/\s+:\s+//;
         next unless $key =~ /\S+/;
         print "'$key' => '$value'\n";
-        $sth->execute($key, $value);
+        # $sth->execute($key, $value);
     }
 
 }
 
-# TODO: fetch event log
+# Now, fetch any event log entries:
+my $res = $ua->get("http://$modem/CmEventLog.asp");
+if (!$res->is_success) {
+    die "Failed to fetch event log page";
+}
+
+my $te = HTML::TableExtract->new(attribs => { id => 'LogTable' });
+$te->parse($res->content)
+    or die "Failed to parse HTML for table";
+my $table = $te->first_table_found
+    or die "Failed to find table";
+
+my $log_sth = $dbh->prepare(
+    "INSERT INTO eventlog (first_time, last_time, priority, description)"
+    ." VALUES(?, ?, ?, ?)"
+);
+my $seen_headers;
+for my $row ($table->rows) {
+    next unless $seen_headers++;
+    my ($first, $last, $priority, $description) = @$row;
+    print "[$first][$last][$priority][$description]\n";
+    $log_sth->execute($first, $last, $priority, $description);
+}
+
+# Now we've inserted any log entries into the DB, clear the log so we don't see
+# them again next time.
+# Yes, there is a potential race condition here, where an event could be logged
+# between us fetching the page and then clearing the log, in which case that
+# event would be lost.  That's not the end of the world.  In an ideal world, I
+# wouldn't be using this nasty approach, I'd just be telling the modem to syslog
+# to a real box.
+
+# We'll get a redirect as the result of this POST:
+push @{ $ua->requests_redirectable }, 'POST';
+$res = $ua->post("http://$modem/goform/CmEventLog",
+    { submit => 'Clear Log', SnmpClearEventLog => 2 });
+if (!$res->is_success) {
+    die "Failed to clear event log - " . $res->status_line;
+}
+
