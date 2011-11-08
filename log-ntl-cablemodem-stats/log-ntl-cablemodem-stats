@@ -51,7 +51,7 @@ for my $page (qw(CmDnstream.asp CmUpstream.asp)) {
         $key =~ s/\s+:\s+//;
         next unless $key =~ /\S+/;
         print "'$key' => '$value'\n";
-        # $sth->execute($key, $value);
+        $sth->execute($key, $value);
     }
 
 }
