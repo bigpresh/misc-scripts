@@ -1,0 +1,35 @@
+=head1 NAME
+
+log-ntl-cablemodem-stats
+
+=head1 DESCRIPTION
+
+A quick script to gather statistics from my Virgin Media (ex-NTL) Ambit cable
+modem and record them to a database for later analysis/graphing etc.
+
+Parses the information via the web interface, as SNMP appears to be disabled
+(and also SNMP is a hateful ball of pain I'd rather not deal with anyway).
+
+Written for my own use, but shared here in case it's of use to anyone else.
+
+If you find it useful, feel free to drop me a mail; if I find other people are
+interested in it, I may well make it better, easier to configure, and be more
+likely to write a fancy data graphing interface too.
+
+=head1 USAGE
+
+As it was written for my own use, it's perhaps not as friendly as it could be.
+
+There's SQL schemass provided for MySQL and SQLite; use the appropriate one to
+set up a database table (or convert to be compatible with your favourite RDBMS).
+
+Then, edit the script and change the C<DBI> connect call to suit where your
+database is, and amend the modem connection details if required.
+
+Then, run the script from cron, and each time it runs, it will insert a new set
+of measurements in the database.
+
+
+=head1 AUTHOR
+
+David Precious <davidp@preshweb.co.uk>

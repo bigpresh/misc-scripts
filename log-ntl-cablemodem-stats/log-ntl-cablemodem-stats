@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+# A quick script to extract connection details (signal/noise ratio, etc) from 
+# a Virgin Media (ex NTL) cable modem and insert them in an SQLite DB for later
+# analysis.
+#
+# Written for myself to monitor my connection, but may perhaps be useful to
+# others (feel free to let me know if it's useful to you!)
+#
+# David Precious <davidp@preshweb.co.uk>, 2011
+
+use strict;
+use DBI;
+use LWP::Simple;
+use HTML::TableExtract;
+
+# Amend this to suit your database
+my $dbh = DBI->connect(
+    'dbi:mysql:database=modemstats;',  # tweak to suit your DB
+    'davidp', 'davidp',                # and put real credentials here
+    {'RaiseError' => 1 }, 
+) or die "Failed to connect to database - $DBI::errstr"; 
+
+# Cable modem config details:
+my $user = "root";
+my $pass = "root";
+my $modem = "192.168.100.1";
+
+
+my $sth = $dbh->prepare('INSERT INTO stats (`key`,`value`) VALUES(?,?)')
+    or die "Failed to prepare INSERT query - " . $dbh->errstr;
+
+# Fetch upstream/downstream stats
+for my $page (qw(CmDnstream.asp CmUpstream.asp)) {
+    my $html = LWP::Simple::get("http://$user:$pass\@$modem/$page")
+        or die "Failed to fetch $page from CM";
+
+    my $te = HTML::TableExtract->new(attribs => { width => 510, height => 300 });
+    $te->parse($html)
+        or die "Failed to parse HTML for table";
+
+    my $table = $te->first_table_found
+        or die "No table matched - HTML: $html";
+    for my $row ($table->rows) {
+        my ($key,$value) = @$row;
+        $key =~ s/\s+:\s+//;
+        next unless $key =~ /\S+/;
+        print "'$key' => '$value'\n";
+        $sth->execute($key, $value);
+    }
+
+}
+
+# TODO: fetch event log
