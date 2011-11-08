@@ -26,6 +26,7 @@ my $user = "root";
 my $pass = "root";
 my $modem = "192.168.100.1";
 
+my $verbose = 0;
 
 my $sth = $dbh->prepare('INSERT INTO stats (`key`,`value`) VALUES(?,?)')
     or die "Failed to prepare INSERT query - " . $dbh->errstr;
@@ -50,7 +51,7 @@ for my $page (qw(CmDnstream.asp CmUpstream.asp)) {
         my ($key,$value) = @$row;
         $key =~ s/\s+:\s+//;
         next unless $key =~ /\S+/;
-        print "'$key' => '$value'\n";
+        print "'$key' => '$value'\n" if $verbose;
         $sth->execute($key, $value);
     }
 
@@ -76,7 +77,7 @@ my $seen_headers;
 for my $row ($table->rows) {
     next unless $seen_headers++;
     my ($first, $last, $priority, $description) = @$row;
-    print "[$first][$last][$priority][$description]\n";
+    print "[$first][$last][$priority][$description]\n" if $verbose;
     $log_sth->execute($first, $last, $priority, $description);
 }
 
