@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+
+# A simple Munin plugin to fetch the latest value for a given stat from the
+# database for Munin to graph it.
+#
+# Usage: drop this script somewhere (say, /usr/share/munin/plugins)
+# Then, for each reading you want graphed, symlink it with -readingname
+# appended, e.g.:
+# cd /etc/munin/plugins
+# ln -sf /usr/share/munin/plugins/cablemodem-munin \
+#       "cablemodem-munin-Downstream Receive Power Level"
+# 
+# David Precious <davidp@preshweb.co.uk>
+
+use strict;
+use DBI;
+
+# Configure your DB connection here
+my $dbh = DBI->connect(
+    'dbi:mysql:database=modemstats', 
+    'davidp', 'davidp',
+    { RaiseError => 1 }
+);
+
+
+my ($statname) = $0 =~ /cablemodemstats-munin-(.+)/
+    or die "Symlink this script as cablemodem-munin-statname";
+$statname =~ s/_/ /g;
+
+# OK, find the most recent reading for the stat we're after
+my $row = $dbh->selectrow_hashref(
+    'select * from stats where `key` = ?', {}, $statname
+);
+my ($value, $unit) = split /\s+/, $row->{value};
+
+my $confname = lc $statname;
+$confname =~ s/[^a-z]//g;
+
+# If munin is calling us to get details of what we return, tell it:
+if ($ARGV[0] eq 'config') {
+    print <<CONFIG;
+graph_title $statname ($unit)
+graph_vlabel $statname
+$confname.label $statname ($unit)
+graph_category network
+graph_info $statname reading from the cable modem
+$confname.info $statname value
+CONFIG
+    exit;
+} else {
+    # Provide the actual reading
+    print "$confname.value $value\n";
+}
+
+exit;
+
