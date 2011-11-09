@@ -1,0 +1,6 @@
+<h1>[% stat %]</h1>
+
+
+<img src="/graph/[% stat %]">
+
+

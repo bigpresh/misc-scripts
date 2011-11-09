@@ -1,0 +1,10 @@
+
+<h1>Select desired measurement to view</h1>
+
+<ul>
+[% FOREACH stat IN stat_types %]
+<li><a href="/view/[% stat %]">[% stat %]</a></li>
+[% END %]
+
+
+
