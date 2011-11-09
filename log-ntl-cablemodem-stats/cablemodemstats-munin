@@ -29,7 +29,8 @@ $statname =~ s/_/ /g;
 
 # OK, find the most recent reading for the stat we're after
 my $row = $dbh->selectrow_hashref(
-    'select * from stats where `key` = ?', {}, $statname
+    'select * from stats where `key` = ? order by id desc limit 1', 
+    {}, $statname
 );
 my ($value, $unit) = split /\s+/, $row->{value};
 
