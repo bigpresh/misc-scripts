@@ -4,6 +4,9 @@
 <h2>Last hour</h2>
 <img src="/graph/[% stat %]/hour/1">
 
+<h2>Last 6 hours</h2>
+<img src="/graph/[% stat %]/hour/6">
+
 <h2>Last 24 hours</h2>
 <img src="/graph/[% stat %]/hour/24">
 
