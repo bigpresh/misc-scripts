@@ -22,7 +22,20 @@ get '/view/:statname' => sub {
 
 
 get '/graph/:statname' => sub {
-    # TODO: support customisable periods
+    redirect '/graph/' . params->{statname} . '/hour/1';
+};
+
+get '/graph/:statname/:unit/:unitcount' => sub {
+    my $periodunit = params->{unit};
+    my $periodunitcount = params->{unitcount};
+    $periodunit =~ s/s$//;
+    if ($periodunit !~ /^ (hour|day|week|month|year) $/x) {
+        return send_error "Invalid unit $periodunit";
+    }
+    if ($periodunitcount !~ /^ \d+ $/x) {
+        return send_error "Invalid unitcount $periodunitcount";
+    };
+
     my $query = <<QUERY;
 SELECT 
     UNIX_TIMESTAMP(`timestamp`) AS time_t, 
@@ -30,10 +43,12 @@ SELECT
 FROM `stats` 
 WHERE 
     `key` = ?
-AND timestamp >= DATE_SUB(now(), interval 6 hour)
+AND timestamp >= DATE_SUB(now(), interval $periodunitcount $periodunit)
 QUERY
     my $sth = database->prepare($query);
-    $sth->execute(params->{statname});
+    $sth->execute(
+        params->{statname}, 
+    );
     my @dataset;
     my $unit;
     while (my $row = $sth->fetchrow_hashref) {
@@ -46,6 +61,9 @@ QUERY
     
     my $title = params->{statname};
     $title .= " ($unit)" if $unit;
+    my $period = "$periodunitcount $periodunit";
+    $period .= 's' if $periodunitcount > 1;
+    $title .= "($period)";
     my $chart = Chart::Strip->new( title => $title );
     $chart->add_data(\@dataset, { style => 'line' });
 
