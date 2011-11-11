@@ -1,7 +1,6 @@
 package CableModemStats;
 use Dancer ':syntax';
 use Dancer::Plugin::Database;
-use Dancer::Plugin::SimpleCRUD;
 
 use Chart::Strip;
 
