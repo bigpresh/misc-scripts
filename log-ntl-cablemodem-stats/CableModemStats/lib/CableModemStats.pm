@@ -55,7 +55,6 @@ QUERY
         ($unit) = $row->{value} =~ /\d+\s+(.+)$/ unless $unit;
         my $value = $row->{value};
         $value =~ s/\s+.+$//g;
-        debug "Adding value '$value' and determined unit '$unit'";
         push @dataset, { time => $row->{time_t}, value => $value };
     }
     
@@ -64,7 +63,11 @@ QUERY
     my $period = "$periodunitcount $periodunit";
     $period .= 's' if $periodunitcount > 1;
     $title .= "($period)";
-    my $chart = Chart::Strip->new( title => $title );
+    my $chart = Chart::Strip->new(
+        title  => $title, 
+        width  => 800, 
+        height => 300,
+    );
     $chart->add_data(\@dataset, { style => 'line' });
 
 
