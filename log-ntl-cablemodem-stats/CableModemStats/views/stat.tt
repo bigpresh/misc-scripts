@@ -1,6 +1,17 @@
 <h1>[% stat %]</h1>
 
 
-<img src="/graph/[% stat %]">
+<h2>Last hour</h2>
+<img src="/graph/[% stat %]/hour/1">
+
+<h2>Last 24 hours</h2>
+<img src="/graph/[% stat %]/hour/24">
+
+<h2>Last week</h2>
+<img src="/graph/[% stat %]/week/1">
+
+<h2>Last month</h2>
+<img src="/graph/[% stat %]/month/1">
+
 
 
