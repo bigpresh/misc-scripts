@@ -25,7 +25,7 @@ while (my $line = <>) {
     my %matches = %+;
 
     # If this is a new connection, remember the hostname being served by this
-    # PID
+    # PID so we can collate the rest of the lines
     if (my ($hostname) = $matches{message} =~ m{connect from (\S+)\s+}) {
         $hostname_for_pid{ $matches{pid} } = $hostname;
     }
