@@ -17,6 +17,14 @@ script's C<--only-host> argument:
     cat rsync.log | ./rsync-log-collate --only-host foo.example.com
 
 
+=head1 TODO
+
+Refactor to ensure connections are output in time order; currently log lines are
+collated simply by using a hash with the hostname and PID as the key, so when
+iterating over them to output them, they'll be in indeterminate order (but all
+lines within the same collated connection will be in correct order, of course).
+
+
 =head1 AUTHOR
 
 David Precious C<< <davidp@preshweb.co.uk> >>
