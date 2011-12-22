@@ -1,0 +1,20 @@
+=head1 rsync-log-collate
+
+A simple script to process an rsync log file on STDIN, collate the log entries
+by connection (using a combination of PID and remote hostname), then output
+each one, so all lines for a given connection are togther rather than all 
+interspersed.
+
+=head2 USAGE
+
+Simply pipe rsync logs into the script's STDIN:
+
+    cat rsync.log | ./rsync-log-collate
+
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
+
+

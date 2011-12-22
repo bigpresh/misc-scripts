@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+# Quick script to process an rsync log file on STDIN, collate the log entries
+# by connection (using a combination of PID and remote hostname), then output
+# each one, so all lines for a given connection are togther rather than all 
+# interspersed.
+# David Precious <davidp@preshweb.co.uk> 2011
+
+use strict;
+
+my %connection;
+my %hostname_for_pid;
+while (my $line = <>) {
+    $line =~ m{ 
+        (?<date> \S+)
+        \s+
+        (?<time> \S+)
+        \s+
+        \[ (?<pid> \d+ ) \]
+        \s+
+        (?<message> .+)
+    }x or next;
+    my %matches = %+;
+
+    # If this is a new connection, remember the hostname being served by this
+    # PID
+    if (my ($hostname) = $matches{message} =~ m{connect from (\S+)\s+}) {
+        $hostname_for_pid{ $matches{pid} } = $hostname;
+    }
+
+    # Collate log lines based on the hostname and PID
+    my $key = join '_', $hostname_for_pid{ $matches{pid} }, $matches{pid};
+    push @{ $connection{$key} }, $line;
+}
+
+for my $conn_key (keys %connection) {
+    print " *** Connection $conn_key ***\n";
+    print @{ $connection{$conn_key} };
+    print "\nConnection $conn_key ends \n\n";
+}
+
