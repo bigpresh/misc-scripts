@@ -7,8 +7,10 @@
 # David Precious <davidp@preshweb.co.uk> 2011
 
 use strict;
+use Getopt::Long;
 
-my $only_host = $ARGV[0];
+my $only_host;
+GeOptions("only-host|h=s" => \$only_host );
 
 my %connection;
 my %hostname_for_pid;
