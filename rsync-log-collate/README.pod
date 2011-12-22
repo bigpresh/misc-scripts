@@ -11,6 +11,11 @@ Simply pipe rsync logs into the script's STDIN:
 
     cat rsync.log | ./rsync-log-collate
 
+If you only want log entries for a certain host, supply the hostname as the
+script's C<--only-host> argument:
+
+    cat rsync.log | ./rsync-log-collate --only-host foo.example.com
+
 
 =head1 AUTHOR
 
