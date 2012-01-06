@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+# Read a series of timestamp|value pairs on STDIN, and graph them using
+# Chart::Strip.
+# David Precious <davidp@preshweb.co.uk>, 2012
+
+use strict;
+use Chart::Strip;
+use Getopt::Long;
+
+# Defaults, then read any options we got
+my $output_file = 'chart.png';
+my $label = 'Value';
+my $title = '';
+my $style = 'line';
+
+GetOptions(
+    "file|output-file|f=s" => \$output_file,
+    "label|l=s" => \$label,
+    "title|t=s" => \$title,
+    "style|s=s" => \$style,
+);
+
+my @dataset;
+while (my $line = <>) {
+        chomp;
+        my ($timestamp, $value) = split /\|/, $line;
+        push @dataset, { time => $timestamp, value => $value };
+}
+ 
+ my $chart = Chart::Strip->new( title => $title );
+ $chart->add_data(\@dataset, { style => $style });
+
+open my $fh, '>', $output_file
+    or die "Failed to open $output_file to write - $!";
+binmode $fh;
+print $fh $chart->png;
+close $fh;
+print "PNG chart written to $output_file\n";

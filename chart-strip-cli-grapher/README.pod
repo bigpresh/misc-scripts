@@ -1,0 +1,28 @@
+=head1 Chart::Strip CLI graphing tool
+
+A quick Perl script using L<Chart::Strip> to chart time-based data piped in 
+on STDIN.
+
+Reads data from STDIN, one reading per line, timestamp and value separated by a
+pipe, e.g.:
+
+    1328054640|0.109
+    1328054880|0.13455
+    1328054940|0.1589
+
+Can be given command line options to override the defaults to set the graph
+size, output file, title, etc.
+
+See the script for full details.
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
+=head1 LICENCE
+
+Released under the terms of the WTFPL.
+
+
+
+
