@@ -64,8 +64,9 @@ QUERY
     $title .= "($period)";
     my $chart = Chart::Strip->new(
         title  => $title, 
-        width  => 800, 
-        height => 300,
+        width  => 500, 
+        height => 100,
+        transparent => 0,
     );
     $chart->add_data(\@dataset, { style => 'line' });
 
