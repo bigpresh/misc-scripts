@@ -10,15 +10,19 @@ use Getopt::Long;
 
 # Defaults, then read any options we got
 my $output_file = 'chart.png';
-my $label = 'Value';
-my $title = '';
-my $style = 'line';
+my $label  = 'Value';
+my $title  = '';
+my $style  = 'line';
+my $height = 300;
+my $width  = 800;
 
 GetOptions(
     "file|output-file|f=s" => \$output_file,
-    "label|l=s" => \$label,
-    "title|t=s" => \$title,
-    "style|s=s" => \$style,
+    "label|l=s"  => \$label,
+    "title|t=s"  => \$title,
+    "style|s=s"  => \$style,
+    "height|h=s" => \$height,
+    "width|w=s"  => \$width,
 );
 
 my @dataset;
@@ -28,8 +32,12 @@ while (my $line = <>) {
         push @dataset, { time => $timestamp, value => $value };
 }
  
- my $chart = Chart::Strip->new( title => $title );
- $chart->add_data(\@dataset, { style => $style });
+my $chart = Chart::Strip->new( 
+    title  => $title, 
+    height => $height,
+    width  => $width,
+);
+$chart->add_data(\@dataset, { style => $style });
 
 open my $fh, '>', $output_file
     or die "Failed to open $output_file to write - $!";
