@@ -5,6 +5,7 @@
 use common::sense;
 use DateTime;
 use File::Copy;
+use WWW::Contact;
 use WWW::Mechanize;
 use YAML;
 
@@ -34,14 +35,18 @@ $mech->get(
     ':content_file' => "$backup_dir/calendar_$ymd.ical.zip"
 ) or warn "Failed to fetch ical export ZIP file";
 
-# And now, export all contacts, both in Google's CSV format and vCard format,
-# for ease of later use:
-for my $format (qw(VCARD GMAIL_CSV)) {
-    $mech->get('https://mail.google.com/mail/contacts/data/export'
-        . '?exportType=GROUP&groupToExport=%5EMine&out=' . $format,
-        ':content_file' => "$backup_dir/contacts_${format}_$ymd"
-    ) or warn "Failed to fetch contacts as $format";
-}
+
+# For contacts, we used to be able to get Google's CSV format and standard vCard
+# format, but they changed how their export system works.  Now, we need to use
+# WWW::Contact to get contact data.  It might not be in a format we can
+# immediately import with other stuff, but at least we have the data.
+my @contacts = WWW::Contact->new->get_contacts(
+    $account->{username}, $account->{password}
+) or die "Failed to fetch contacts!";
+
+YAML::DumpFile("$backup_dir/contacts_$ymd.yml", \@contacts);;
+
+
 
 # Finally, Google Reader subscriptions:
 $mech->get('http://www.google.com/reader/subscriptions/export',
