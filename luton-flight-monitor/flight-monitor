@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+
+# Crude script to monitor for flight status changes on Luton Airport's website.
+#
+# Written for my own use, a bit nasty, but shared here under the terms of the
+# WTFPL in case it's useful to anyone.
+#
+# David Precious <davidp@preshweb.co.uk>
+
+use strict;
+use Config::Auto;
+use LWP::Simple;
+use HTML::TableExtract;
+use SMS::AQL;
+
+my $flight = shift or die "Usage: $0 flightnum";
+my $url ="http://www.london-luton.co.uk/FlightData.ashx"
+    . "?dir=arr&lang=en&id=1&r=20016807";
+
+$Config::Auto::DisablePerl = 1;
+my $config = Config::Auto::parse()
+    or die "No config found";
+
+
+my $sms = new SMS::AQL({
+    username => $config->{username},
+    password => $config->{password},
+    options => { sender => $config->{sender} },
+});
+
+my $last_status;
+check:
+while (1) {
+    sleep 30 if $last_status;
+    my $html = LWP::Simple::get($url) or warn "Failed to fetch HTML" and next;
+    my $te = HTML::TableExtract->new(
+        headers => [ 'Flight No', 'Airport', 'Scheduled', 'Flight Status' ]
+    );
+    $te->parse($html) or warn "Failed to parse HTML" and next;
+
+    for my $row ($te->rows) {
+        if ($row->[0] eq $flight) {
+            say "Status: $row->[3]";
+            if ($row->[3] ne $last_status) {
+                say "That's a change!";
+                $sms->send_sms(
+                    $config->{destination}, 
+                    "Flight $flight now $row->[3]"
+                );
+            }
+            $last_status = $row->[3];
+
+            next check;
+        }
+    }
+}
+    

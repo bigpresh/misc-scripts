@@ -1,0 +1,40 @@
+=head1 flight-monitor
+
+=head2 Description
+
+A really simple and somewhat nasty script to watch for changes of the status of
+a flight on Luton Airport's website and send me a text message using L<SMS::AQL>
+every time it changes (TODO: use L<SMS::Send> so it's easier to change SMS
+gateway provider for anyone who happens to use this).
+
+=head2 Configuration
+
+Uses L<Config::Auto> to semi-magically find and parse the config file - see the
+docs for L<Config::Auto> for how this works.
+
+Same config file:
+
+    username: 'youraqlusername'
+    password: 'youraqlpassword'
+    sender: '+447.......'
+    destination: '+447.......'
+
+
+=head2 Usage
+
+    # Run it with the flight number, e.g.:
+    perl flight-monitor EG-42
+
+
+=head2 Licence
+
+This is just a quick dirty script I use for myself when I pick up my parents
+from Luton Airport; I dumped it here in case anyone else found it at all useful.
+If so, use it under the terms of the WTFPL.
+
+
+=head2 Author
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
+
