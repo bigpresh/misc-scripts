@@ -33,9 +33,11 @@ sub said {
 
     } elsif ($mess->{body} =~ m{
         (
+        # match "forward keyword, "'forward' keyword, "forward() keyword" etc
         \b['"]? (?<keyword> [a-z_-]+) ['"]? (?:\(\))? \s keyword
         |
-        the \s keyword \s ['"]? (?<keyword> [a-z_-]+) ['"]? \b
+        # or "the keyword forward", "the keyword 'forward", etc
+        the \s keyword \s ['"]? (?<keyword> [a-z_-]+) ['"]?
         )
     }xm
     ) {
