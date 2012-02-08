@@ -35,7 +35,7 @@ sub said {
         (
         \b['"]? (?<keyword> [a-z_-]+) ['"]? (?:\(\))? \s keyword
         |
-        the ['"]? (?<keyword> [a-z_-]+) ['"]? \b
+        the \s ['"]? (?<keyword> [a-z_-]+) ['"]? \s keyword\b
         )
     }xm
     ) {
