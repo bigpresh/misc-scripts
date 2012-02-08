@@ -29,7 +29,7 @@ sub said {
             $link = "$module is at http://p3rl.org/$module ($title)";
         }
 
-    } elsif (my ($keyword) = $mess->{body} =~ /\b(\[a-z_-]+)(?:\(\))? keyword/) {
+    } elsif (my ($keyword) = $mess->{body} =~ /\b([a-z_-]+)(?:\(\))? keyword/) {
         # TODO: this might fire a little often; if it does, we could load Dancer
         # and see if Dancer->can($keyword) or something
         $link = "The $keyword keyword is documented at "
