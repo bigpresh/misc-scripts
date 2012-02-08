@@ -5,7 +5,9 @@
 package Bot::BasicBot::Pluggable::Module::DancerLinks;
 use strict;
 use base 'Bot::BasicBot::Pluggable::Module';
+use Dancer;
 use URI::Title;
+use 5.010;
 
 sub help {
     return <<HELPMSG;
@@ -25,15 +27,24 @@ sub said {
         my $title = URI::Title::title($url);
         if ($title) {
             $title =~ s/^$module - //;
-            $title -~ s/- metacpan.+//;
+            $title =~ s/- metacpan.+//;
             $link = "$module is at http://p3rl.org/$module ($title)";
         }
 
-    } elsif (my ($keyword) = $mess->{body} =~ /\b([a-z_-]+)(?:\(\))? keyword/) {
-        # TODO: this might fire a little often; if it does, we could load Dancer
-        # and see if Dancer->can($keyword) or something
-        $link = "The $keyword keyword is documented at "
-              . "http://p3rl.org/Dancer#$keyword";
+    } elsif ($mess->{body} =~ m{
+        (
+        \b['"]? (?<keyword> [a-z_-]+) ['"]? (?:\(\))? \s keyword
+        |
+        the ['"]? (?<keyword> [a-z_-]+) ['"]? \b
+        )
+    }xm
+    ) {
+        my $keyword = $+{keyword};
+
+        if (Dancer->can($keyword)) {
+            $link = "The $keyword keyword is documented at "
+                . "http://p3rl.org/Dancer#$keyword";
+        }
     }
 
     # Announce the link we found, unless we already did that recently
