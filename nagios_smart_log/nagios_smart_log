@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+# Nagios plugin to monitor for logged S.M.A.R.T. errors
+#
+# I've been using the Nagios check_ide_smart plugin, but it has given a clean
+# bill of health to clearly failing drives.  Drives which show errors logged in
+# the SMART error logs.  I will not trust any drive which has logged errors.
+#
+# David Precious <davidp@preshweb.co.uk>
+
+use strict;
+use FileHandle;
+use Nagios::Plugin;
+
+
+my $np = Nagios::Plugin->new(
+    shortname => 'CHECKSMARTLOG',
+    'usage' => "%s -d sda",
+);
+
+$np->add_arg(
+    spec    => "drive|d=s",
+    help    => "Drive to monitor",
+    default => "sda",
+);
+$np->add_arg(
+    spec    => "smartctl|s=s",
+    help    => "Path to smartctl",
+    default => "/usr/sbin/smartctl",
+);
+$np->add_arg(
+    spec    => "sudo|S",
+    help    => "Use sudo to run smartctl",
+    default => 1,
+);
+
+$np->getopts;
+
+
+
+## Fetch the data we need:
+my $smartctl_fh = FileHandle->new(
+    ($np->opts->sudo ? 'sudo ' : '') . $np->opts->smartctl 
+    . " -l error " . $np->opts->drive . " |"
+) or $np->nagios_die("Can't execute ifconfig! - $!");
+
+my $error_log = join '',  $smartctl_fh->getlines;
+$smartctl_fh->close;
+
+my @errors = $error_log =~ /(Error \d+ occurred at.+$)/mg;
+if (@errors) {
+    $np->nagios_exit(CRITICAL,
+        scalar(@errors) . " SMART errors, latest: " . $errors[0]
+    );
+} elsif ($error_log =~ /No Errors Logged/m) {
+    $np->nagios_exit(OK, "No SMART errors logged");
+} else {
+    $np->nagios_exit(UNKNOWN, "Failed to read/parse SMART error log");
+}
+
+
