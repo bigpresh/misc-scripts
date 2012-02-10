@@ -1,0 +1,30 @@
+=head1 nagios_smart_logs
+
+A Nagios plugin to monitor for errors reported by
+L<SMART|http://en.wikipedia.org/wiki/S.M.A.R.T.> to alert on failing hard
+drives.
+
+I've used the old C<check_ide_smart> plugin from Nagios itself, but it relies
+upon SMART detecting and reporting problems well.
+
+I've seen a few drives failing and throwing IO errors, all the while SMART
+happily proclaims:
+
+  SMART overall-health self-assessment test result: PASSED
+
+Similarly, C<check_ide_smart> reported no problems:
+
+  [dave@devvps:~]$ sudo /usr/lib/nagios/plugins/check_ide_smart -n /dev/sdb
+  OK - Operational (18/18 tests passed)
+
+I can no longer trust it.
+
+So, this plugin requests the error log (using C<smartctl -l errors> and alarms
+if errors are found:
+
+  [dave@devvps:~]$ ./nagios_smart_log -d /dev/sdb
+  CHECKSMARTLOG CRITICAL - 5 SMART errors, latest: Error 13 occurred at disk
+  power-on lifetime: 29769 hours (1240 days + 9 hours)
+
+Far more useful.
+
