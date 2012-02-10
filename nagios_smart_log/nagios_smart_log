@@ -42,7 +42,7 @@ $np->getopts;
 my $smartctl_fh = FileHandle->new(
     ($np->opts->sudo ? 'sudo ' : '') . $np->opts->smartctl 
     . " -l error " . $np->opts->drive . " |"
-) or $np->nagios_die("Can't execute ifconfig! - $!");
+) or $np->nagios_die("Can't execute " . $np->opts->smartctl . " - $!");
 
 my $error_log = join '',  $smartctl_fh->getlines;
 $smartctl_fh->close;
