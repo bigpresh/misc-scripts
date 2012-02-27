@@ -21,6 +21,12 @@ $Config::Auto::DisablePerl = 1;
 my $config = Config::Auto::parse()
     or die "No config found";
 
+# check we have all expected config settings
+if (my @missing = map { !$config->{$_} }
+    qw(username password sender destination)
+) {
+    die "Config file missing settings: " . join ',', @missing;
+}
 
 my $sms = new SMS::AQL({
     username => $config->{username},
@@ -43,10 +49,13 @@ while (1) {
             say "Status: $row->[3]";
             if ($row->[3] ne $last_status) {
                 say "That's a change!";
-                $sms->send_sms(
+                my ($ok, $err) = $sms->send_sms(
                     $config->{destination}, 
                     "Flight $flight now $row->[3]"
                 );
+                if (!$ok) {
+                    warn "Failed to send SMS - $err";
+                }
             }
             $last_status = $row->[3];
 
