@@ -28,7 +28,7 @@ if (my @missing = grep { !$config->{$_} }
     die "Config file missing settings: " . join ',', @missing;
 }
 
-my $sms = new SMS::AQL({
+my $sms = SMS::AQL->new({
     username => $config->{username},
     password => $config->{password},
     options => { sender => $config->{sender} },
