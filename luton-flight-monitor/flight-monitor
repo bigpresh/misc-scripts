@@ -22,7 +22,7 @@ my $config = Config::Auto::parse()
     or die "No config found";
 
 # check we have all expected config settings
-if (my @missing = map { !$config->{$_} }
+if (my @missing = grep { !$config->{$_} }
     qw(username password sender destination)
 ) {
     die "Config file missing settings: " . join ',', @missing;
