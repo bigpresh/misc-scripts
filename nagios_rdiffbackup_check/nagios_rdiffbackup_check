@@ -39,18 +39,32 @@ $np->add_arg(
 $np->getopts;
 
 my $rdfh = FileHandle->new(
-    $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest . ' |'
+    $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest 
+        . ' 2>&1 |'
 ) or $np->nagios_die(
     "Can't execute " . $np->opts->rdiff_backup . " - $!"
 );
 my $last_mirror;
+my $backup_running;
 while (my $line = $rdfh->getline) {
+    if (my ($pid) = $line =~ /(\d+) is still running/) {
+        # TODO: perhaps verify that this PID is still running - although I
+        # believe rdiff-backup does that already
+        $backup_running = $pid;
+        $last_mirror    = undef;
+        last;
+    }
     $last_mirror = (split /\s/, $line)[0];
 }
 $rdfh->close;
 
 if (!$last_mirror) {
-    $np->nagios_die("Failed to determine time since last mirror");
+    if ($backup_running) {
+        # TODO: Check time since last log update
+        $np->nagios_exit(OK, "Backup in progress (PID $backup_running)");
+    } else {
+        $np->nagios_die("Failed to determine time since last mirror");
+    }
 }
 
 
