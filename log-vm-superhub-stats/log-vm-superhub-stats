@@ -1,0 +1,138 @@
+#!/usr/bin/perl
+
+# A quick script to extract connection details (signal/noise ratio, etc) from 
+# a Virgin Media (ex NTL) cable modem and insert them in an SQLite DB for later
+# analysis.
+#
+# The key names used to store the data in the DB match those of the previous
+# version (which were taken straight from the cable modem's web interface) so
+# that historical analysis of figures isn't interrupted.
+#
+# Written for myself to monitor my connection, but may perhaps be useful to
+# others (feel free to let me know if it's useful to you!)
+#
+# David Precious <davidp@preshweb.co.uk>, 2011
+
+use strict;
+use DBI;
+use LWP::UserAgent;
+use HTML::TableExtract;
+use List::Util;
+
+# Amend this to suit your database
+my $dbh = DBI->connect(
+    'dbi:mysql:database=modemstats;',  # tweak to suit your DB
+    'davidp', 'davidp',                # and put real credentials here
+    {'RaiseError' => 1 }, 
+) or die "Failed to connect to database - $DBI::errstr"; 
+
+# Cable modem config details:
+my $modem = "192.168.100.1";
+
+my $verbose = 0;
+
+my $sth = $dbh->prepare('INSERT INTO stats (`key`,`value`) VALUES(?,?)')
+    or die "Failed to prepare INSERT query - " . $dbh->errstr;
+
+my $ua = LWP::UserAgent->new;
+
+
+my $res = $ua->get("http://$modem/VmRouterStatus_downstream.asp");
+if (!$res->is_success) {
+    die "Failed to fetch downstream stats - " . $res->status_line;
+}
+
+my $te = HTML::TableExtract->new;
+$te->parse($res->content)
+    or die "Failed to parse table from HTML";
+
+my $table = $te->first_table_found;
+
+use Data::Dump;
+
+# In the below data collection the column we're treating as SNR is more
+# accurately described as RxMER (receive modulation error ratio), according to
+# the SuperHub.
+# A further explanation, from a paper by Cisco:
+# The SNR estimate, which is derived after the data is demodulated, is more
+# accurately called receive modulation error ratio (RxMER), a term recently
+# defined in the DOCSIS MIB. RxMER includes the effects of the cable network
+# downstream or upstream noise floor, in-channel frequency response (including
+# amplitude tilt and ripple, group delay variation, and micro-reflections),
+# oscillator phase noise, receiver imperfections, and all other impairments that
+# affect the receive symbol constellation. Because it measures the end-to-end
+# performance of the communications link, RxMER is useful for tracking long-term
+# system performance trends.
+#
+# So, whilst it might not be exactly what we'd think of as a signal-noise ratio,
+# it seems reasonable to use it as an approximation.
+
+my @ds_power_levels;
+my @ds_snrs;
+my @ds_cols = $table->columns;
+my @ds_titles = @{ shift @ds_cols };
+for my $col (@ds_cols) {
+    my %channel_data;
+    @channel_data{ @ds_titles } = @$col;
+    
+    
+    print Data::Dump::dump(\%channel_data) . "\n";
+    next if $channel_data{'Lock Status(QAM Lock/FEC Sync/MPEG Lock)'} ne 'Locked';
+
+
+    push @ds_power_levels, $channel_data{'Power Level (dBmV)'};
+    push @ds_snrs, $channel_data{'RxMER (dB)'};
+}
+
+my $avg_power_level = List::Util::sum(@ds_power_levels) / @ds_power_levels;
+my $avg_snr = List::Util::sum(@ds_snrs) / @ds_snrs;
+
+$sth->execute('Downstream Receive Power Level', $avg_power_level . ' dBmV');
+$sth->execute('Downstream SNR', $avg_snr . ' dB');
+
+print "DS: avg power $avg_power_level dBmV, avg SNR $avg_snr dB\n";
+
+
+
+
+# Now for the upstream stats:
+$res = $ua->get("http://$modem/VmRouterStatus_upstream.asp");
+if (!$res->is_success) {
+    die "Failed to fetch upstream stats - " . $res->status_line;
+}
+
+my $te = HTML::TableExtract->new;
+$te->parse($res->content)
+    or die "Failed to parse table from HTML";
+
+my $table = $te->first_table_found;
+
+my @us_cols = $table->columns;
+
+
+# the first column is the headings per-channel, get that first so we can turn
+# the data for each channel into a hash
+my @us_titles = @{ shift @us_cols };
+my @upstream_power_levels;
+for my $col (@us_cols) {
+    my %channel_data;
+    @channel_data{@us_titles} = @$col;
+    next unless $channel_data{'Channel Type'} ne 'N/A';
+    push @upstream_power_levels, $channel_data{'Power Level (dBmV)'};
+}
+
+my $avg_upstream_power_level = 
+    List::Util::sum(@upstream_power_levels) / @upstream_power_levels;
+
+print "Avg upstream power level: $avg_upstream_power_level dBmV\n";
+$sth->execute(
+    'Upstream transmit Power Level', 
+    $avg_upstream_power_level . ' dBmV'
+);
+
+
+
+# TODO: handle parsing log entries from the eventlog page.
+# Shame this thing doesn't do syslogging.
+
+
