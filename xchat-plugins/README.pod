@@ -1,0 +1,31 @@
+=head1 XChat plugins
+
+In this directory are some old Perl plugins I wrote for
+L<XChat|http://www.xchat.org/>.
+
+I no longer actively use XChat, but these are here for anyone who may find them
+useful.
+
+These scripts are old, unsupported, and not illustrative of my current coding
+standards - they're nasty.
+
+
+=head2 xchat-filter-messages.pl
+
+Allows you to filter out unwanted messages matching regular expressions.  Useful
+to ignore pointless things like "now playing" updates.
+
+=head2 xchat-parse-netlink-messages.pl
+
+Parses messages relayed from one IRC channel to another (typically on a
+different network) by the NetLink eggdrop script written by David Proper and
+turns them into “normal” channel messages.
+
+=head2 xchat-parse-trivia-hints.pl
+
+I used to use this in a trivia quiz channel; it parses messages containing the
+hints, e.g. "Hint: @@@ @@@@", and replaces them with a message showing the
+number of letters at a glance - e.g. "Hint letters: 3, 4".  Also, more
+unsportingly, remembers the answers to questions, and if it sees that question
+again, reports the answer :)
+
