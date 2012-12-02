@@ -26,13 +26,30 @@ my $user = "root";
 my $pass = "root";
 my $modem = "192.168.100.1";
 
+
+###############################################################################
+# The following patch, subclassing LWP::UserAgent to provide basic auth only,
+# was contributed by Jeff Fern, who noted that the original version (which had
+# worked for my Ambit 120 CM) didn't work for him; this change made it work for
+# him.  I no longer use my CM (I got upgraded to the "Super"Hub), so I haven't
+# been able to test this; if you have authentication problems, you may wish to
+# try the previous version (use GitHub to find the commit this change was added
+# in, and use the one before :) ).
+{
+    package RequestAgent;
+    our @ISA = qw(LWP::UserAgent);
+    sub get_basic_credentials {
+        return ($user, $pass);
+    }
+}
+
+
 my $verbose = 0;
 
 my $sth = $dbh->prepare('INSERT INTO stats (`key`,`value`) VALUES(?,?)')
     or die "Failed to prepare INSERT query - " . $dbh->errstr;
 
-my $ua = LWP::UserAgent->new;
-$ua->credentials("$modem:80", "NTL", $user, $pass);
+my $ua = RequestAgent->new;
 
 # Fetch upstream/downstream stats
 for my $page (qw(CmDnstream.asp CmUpstream.asp)) {
