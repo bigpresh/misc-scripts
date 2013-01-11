@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+
+use strict;
+use LWP::Simple ();
+use HTML::TableExtract;
+use List::Util;
+
+my $author = uc shift;
+my $url = "http://cpants.cpanauthors.org/author/$author";
+my $author_page_html = LWP::Simple::get($url)
+    or die "Failed to fetch $url";
+
+my ($game_kwalitee) = $author_page_html
+    =~ m{<th>CPANTS Game Kwalitee</th><td>(.+?)</td>};
+
+print "Game score for $author: $game_kwalitee\n";
+
+my $te = HTML::TableExtract->new(
+    headers => [ qw(name released kwalitee metrics) ]
+);
+$te->parse($author_page_html)
+    or die "Failed to page author page HTML";
+
+my @scores;
+for my $row ($te->rows) {
+    my $dist = $row->[0];
+    $dist =~ s/\n//g;
+    my $url = "http://cpants.cpanauthors.org/dist/$dist";
+    my $dist_page_html = LWP::Simple::get($url)
+        or die "Failed to fetch $url";
+
+    my ($core_kwalitee) = $dist_page_html
+        =~ m{<th>Core Kwalitee</th><td>(.+?)</td>};
+
+    print "$dist kwalitee: $core_kwalitee\n";
+    push @scores, $core_kwalitee;
+}
+
+my $avg = List::Util::sum(@scores) / @scores;
+
+print "Calculated average: $avg\n";
+

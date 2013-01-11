@@ -1,0 +1,56 @@
+=head1 cpants-scores
+
+A quick script to parse the overall "CPANTS Game Kwalitee" score from
+cpants.cpanauthors.org for a named author, and then fetch the core kwalitee
+for each of their dists.
+
+=head1 USAGE
+
+    cpants-scores BIGPRESH
+
+=head1 OUTPUT
+
+Example output:
+
+    Game score for BIGPRESH: 98.6519607843137
+    Bot-BasicBot-Pluggable-Module-Abuse-YourMomma kwalitee: 100.00
+    Bot-BasicBot-Pluggable-Module-GitHub kwalitee: 100.00
+    Bot-BasicBot-Pluggable-Module-Nagios kwalitee: 100.00
+    Bot-BasicBot-Pluggable-Module-TwitterFriendsStatus kwalitee: 100.00
+    Bot-BasicBot-Pluggable-Module-TwitterWatch kwalitee: 100.00
+    Color-Spectrum-Multi kwalitee: 100.00
+    Dancer-Plugin-Auth-Extensible kwalitee: 100.00
+    Dancer-Plugin-Database kwalitee: 100.00
+    Dancer-Plugin-DebugDump kwalitee: 100.00
+    Dancer-Plugin-EscapeHTML kwalitee: 100.00
+    Dancer-Plugin-MPD kwalitee: 100.00
+    Dancer-Plugin-NYTProf kwalitee: 100.00
+    Dancer-Plugin-SMS kwalitee: 100.00
+    Dancer-Plugin-SimpleCRUD kwalitee: 100.00
+    Dancer-Plugin-TimeRequests kwalitee: 100.00
+    Dancer-Session-Storable kwalitee: 100.00
+    Dancer-Template-HtmlTemplate kwalitee: 100.00
+    Finance-PremiumBonds kwalitee: 100.00
+    HTML-Table-FromDatabase kwalitee: 100.00
+    Lyrics-Fetcher kwalitee: 100.00
+    Lyrics-Fetcher-AZLyrics kwalitee: 100.00
+    Lyrics-Fetcher-AstraWeb kwalitee: 100.00
+    Lyrics-Fetcher-LyricWiki kwalitee: 100.00
+    MP3-CreateInlayCard kwalitee: 100.00
+    Net-Shoutcast-Admin kwalitee: 100.00
+    Pod-Readme kwalitee: 100.00
+    SMS-AQL kwalitee: 100.00
+    SMS-Send-AQL kwalitee: 100.00
+    WWW-Comic-Plugin-CyanideAndHappiness kwalitee: 100.00
+    WWW-Comic-Plugin-LeastICouldDo kwalitee: 100.00
+    WWW-Comic-Plugin-Wulffmorgenthaler kwalitee: 100.00
+    WWW-Comic-Plugin-XKCD kwalitee: 100.00
+    WWW-Comic-Plugin-f8d kwalitee: 100.00
+    WebService-Bluga-Webthumb kwalitee: 100.00
+    Calculated average: 100
+
+
+=head1 AUTHOR
+
+David Precious (bigpresh) C<< <davidp@preshweb.co.uk> >>
+
