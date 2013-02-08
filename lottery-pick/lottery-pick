@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($numbers, $max) = @ARGV;
+$max     ||= 49;
+$numbers ||= 6;
+
+my %results;
+for (1..$numbers) {
+    my $pick = int(rand $max) + 1;
+    redo if $results{$pick}++;
+}
+
+print "Your numbers: " . join(', ', sort { $a <=> $b } keys %results) . "\n";
+
