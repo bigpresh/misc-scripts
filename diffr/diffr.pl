@@ -14,16 +14,19 @@ use warnings;
 our $VERSION = '0.0.1';
 
 my $usage = qq[
-usage: diffr -s source -d dest [-p pattern]
+usage: diffr -s source -d dest [-p pattern] [-l]
 
 if -p is given, we will only do the diff for filenames which match
 this pattern - this matches the full path, so a pattern of 'foo' will
 match 'foo.txt', '/home/foo/bar' etc. 
+
+If -l is given, we will simply list files which differ, rather than outputting
+the diff.
 ];
 
 
 my %opts;
-getopt('sdph', \%opts);
+getopt('sdplh', \%opts);
 
 if (!$opts{'s'} || !$opts{'d'} || $opts{'h'}) {
     print $usage; exit;
@@ -116,7 +119,7 @@ sub do_diff {
 
     my $file = shift;
     
-    my $diff = `diff -u '$opts{'s'}$file' '$opts{'d'}$file'`;
+    my $diff = `diff -u '$opts{s}$file' '$opts{d}$file'`;
     
     if ($diff) {
         if ($opts{l}) {
