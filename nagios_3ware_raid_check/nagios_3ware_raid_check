@@ -42,9 +42,14 @@ my (@critical, @warning, @ok);
 # First, find out what controller card(s) we have.
 my $listfh = FileHandle->new('sudo ' . $np->opts->tw_cli . ' show |')
     or $np->nagios_die("Can't get RAID adapter list via tw_cli command - $!");
-
-my @cards = grep { /^c\d+/ } $listfh->getlines;
+my @lines = $listfh->getlines;
+my @cards = grep { /^c\d+/ } @lines;
 $listfh->close;
+
+if ($np->opts->verbose) {
+    print "Result of `" . $np->opts->tw_cli . " show` command:\n";
+    print @lines;
+}
 
 if (!@cards) {
     $np->nagios_die("Failed to find any RAID controller cards!");
@@ -52,16 +57,27 @@ if (!@cards) {
 
 for my $cardinfo (@cards) {
     my ($card, $model) = $cardinfo =~ m{^c(\d+) \s+ (\S+) \s+};
-    print "Card $card is a $model\n"
-        if $np->opts->verbose;
+
+    if ($np->opts->verbose) {
+        print "Card $card is a $model\n";
+        print "Fetching details of card $card - executing `"
+            . $np->opts->tw_cli . " info c$card`\n";
+    }
 
     # Determine the arrays present on this card:
     my $statusfh = FileHandle->new(
         'sudo ' . $np->opts->tw_cli . " info c$card |"
     ) or $np->nagios_die("Can't get RAID status via tw_cli command - $!");
 
-    my @arrays = grep { / RAID-\d+ /x } $statusfh->getlines;
+    @lines = $statusfh->getlines;
+    my @arrays = grep { / RAID-\d+ /x } @lines;
     $statusfh->close;
+
+    if ($np->opts->verbose) {
+        print @lines;
+        print "Identified " . scalar @arrays . " arrays:\n";
+        print @arrays;
+    }
 
     for my $arrayinfo (@arrays) {
 
