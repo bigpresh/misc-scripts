@@ -1,0 +1,46 @@
+=head1 nagios_adaptec_raid_check/
+
+=head2 DESCRIPTION
+
+This is a simple Nagios plugin to monitor the state of RAID arrays on Adaptec
+RAID cards, using Adaptec's C<arcconf> utility from their StorMan (Storage
+Manager) software, which you can download for Linux, FreeBSD and Windows from
+their website: L<http://www.adaptec.com/en-us/downloads/>
+
+
+
+=head3 sudo setup
+
+You probably don't want to be running your Nagios plugins as root.  However,
+C<arcconf> needs to run as root.  So, this script uses sudo to execute
+C<arcconf> as root.
+
+You'll need to allow this to happen with no password.  For security, I'd only
+allow the nagios user to run the C<arcconf> command - add something like this to
+the C<sudoers> file:
+
+  nagios  ALL=  NOPASSWD: /usr/StorMan/arcconf
+
+By default, this plugin expects to find the C<arcconf> binary at
+C</usr/StorMan/arcconf>.  
+
+However, if you need to, you can provide the path to the C<arcconf> binary using 
+the C<--arcconf> option, e.g.:
+
+    ./nagios_adaptec_raid_check --arcconf_cli=/path/to/arcconf
+
+
+
+=head1 CONTRIBUTING / NEW VERSIONS
+
+This plugin is developed on GitHub at:
+
+L<https://github.com/bigpresh/misc-scripts/tree/master/nagios_adaptec_raid_check>
+
+Patches / bug reports / feedback welcome.
+
+=head1 AUTHOR
+
+David Precious <davidp@preshweb.co.uk>
+
+

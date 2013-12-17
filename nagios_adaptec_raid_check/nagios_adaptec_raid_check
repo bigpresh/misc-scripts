@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+# A simple Nagios plugin to monitor the status of a RAID array on an Adaptec RAID
+# card, using the Adaptec StorMan utility
+#
+# For new versions, check GitHub:
+# https://github.com/bigpresh/misc-scripts/tree/master/nagios_adaptec_raid_check
+#
+# David Precious <davidp@preshweb.co.uk>
+
+
+use strict;
+use Nagios::Plugin;
+use FileHandle;
+
+my $np = Nagios::Plugin->new(
+    shortname => 'RAIDCHECK',
+    usage => '%s [--verbose]',
+);
+
+$np->add_arg(
+    spec => 'verbose|v',
+    help => 'Verbose debug output',
+);
+$np->add_arg(
+    spec => 'controller|c=i',
+    help => 'RAID controller number',
+    default => 1,
+);
+$np->add_arg(
+    spec => 'arcconf|a=s',
+    help => 'Path to arcconf utility',
+    default => '/usr/StorMan/arcconf',
+);
+
+$np->getopts;
+
+# Quick and braindead approach; this wouldn't be of any use if there were
+# multiple logical devices (arrays), but, well, meh.  The two boxes we'll use
+# this on only have one array.  If we ever want to use this on a box with
+# additional arrays, we'll need to refactor it.
+
+my $cmd = 'sudo ' . $np->opts->arcconf . ' getconfig ' 
+    . $np->opts->controller . ' LD';
+
+print "Executing '$cmd'\n" if $np->opts->verbose;
+
+my $fh = FileHandle->new("$cmd |")
+    or $np->nagios_die("Failed to get controller config info - $!");
+
+my ($status_line) = grep { /Status of logical device/ } $fh->getlines;
+$fh->close;
+
+if (!$status_line) {
+    $np->nagios_die("Failed to match adaptor status!");
+}
+
+my ($status) = $status_line =~ /:\s+(.+)$/;
+
+if ($status ne 'Optimal') {
+    $np->nagios_exit(CRITICAL, "RAID status $status");
+} else {
+    $np->nagios_exit(OK, "RAID status $status");
+}
+
