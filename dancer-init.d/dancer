@@ -47,10 +47,14 @@ stop() {
 start_app() {
     APP_NAME=$1;
     echo "Starting Dancer application '$APP_NAME'";
-    # Read the vars we're going to use from the app config
+    # Read the vars we're going to use from the app config:
     source $APPCFGDIR/$APP_NAME;
+    # if we we weren't told to listen on a specific host/IP, default to "*"
+    if [ "$HOST" == "" ]; then
+        $HOST="*"
+    fi
     start-stop-daemon --start --chuid $USER --chdir $DIR --pidfile=$PIDFILE \
-        --exec $PLACKUPBIN -- --server Starman --listen \*:$PORT \
+        --exec $PLACKUPBIN -- --server Starman --listen $HOST:$PORT \
 	--daemonize --pid $PIDFILE $STARMAN_OPTS --app $SCRIPT 
 }
 
