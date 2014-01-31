@@ -2,6 +2,7 @@
 
 # Simple init.d script to start/stop Dancer appliactions on Debian boxes.
 # Originally written by David Precious <davidp@preshweb.co.uk>
+# Tweaked to use starman by way of Plackup, by James Ronan <jim@dev.uk2.net>
 
 ### BEGIN INIT INFO
 # Provides:          dancer
@@ -14,7 +15,7 @@
 
 # Path to a directory containing per-app config files.
 APPCFGDIR=/etc/dancer
-STARMANBIN=/usr/local/bin/starman
+PLACKUPBIN=/opt/perlbrew/perls/perl-5.14.2/bin/plackup
 
 # Each Dancer application should have a config file in the directory named
 # above, containing the following settings:
@@ -48,10 +49,9 @@ start_app() {
     echo "Starting Dancer application '$APP_NAME'";
     # Read the vars we're going to use from the app config
     source $APPCFGDIR/$APP_NAME;
-    start-stop-daemon --start --chuid $USER --chdir $DIR \
-        --pidfile=$PIDFILE \
-        --exec $STARMANBIN -- -p $PORT $SCRIPT -D --pid $PIDFILE \
-        $STARMAN_OPTS
+    start-stop-daemon --start --chuid $USER --chdir $DIR --pidfile=$PIDFILE \
+        --exec $PLACKUPBIN -- --server Starman --listen \*:$PORT \
+	--daemonize --pid $PIDFILE $STARMAN_OPTS --app $SCRIPT 
 }
 
 stop_app() {
@@ -72,10 +72,7 @@ stop_all_apps() {
     done
 }
 
-if [[ $EUID -ne 0 ]]; then
-    echo "You need to run this as root."
-    exit 1
-fi
+
 
 case "$1" in
     start)
