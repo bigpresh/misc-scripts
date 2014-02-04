@@ -51,7 +51,7 @@ start_app() {
     source $APPCFGDIR/$APP_NAME;
     # if we we weren't told to listen on a specific host/IP, default to "*"
     if [ "$HOST" == "" ]; then
-        $HOST="*"
+        HOST="*"
     fi
     start-stop-daemon --start --chuid $USER --chdir $DIR --pidfile=$PIDFILE \
         --exec $PLACKUPBIN -- --server Starman --listen $HOST:$PORT \
