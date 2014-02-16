@@ -38,9 +38,10 @@ my @actions = (
     '@quit',
 );
 for my $action (@actions) {
+    print "Performing action - $action\n";
     $telnet->print($action);
     sleep 5;
 }
 $telnet->close;
-
+print "Done.\n";
 
