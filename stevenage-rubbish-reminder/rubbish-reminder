@@ -39,9 +39,12 @@ if (my ($date, $type) = $mech->content =~
     print "Parsed date to " . $dt->dmy;
     if ($dt->dmy eq DateTime->now->add( days => 1)->dmy) {
         print "That's tomorrow, send reminder!";
+        my $api_keys = ref $conf->{nma_key} eq 'ARRAY'
+            ? $conf->{nma_key}
+            : [ $conf->{nma_key};
         my $nma = WebService::NotifyMyAndroid->new;
         my $message = $nma->notify(
-            apikey => $conf->{nma_key},
+            apikey => $api_keys,
             application => 'Rubbish collection',
             event       => "$type collection tomorrow",
             description => "$type collection tomorrow morning ($date)",
