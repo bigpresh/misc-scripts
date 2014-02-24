@@ -23,3 +23,6 @@ It will find out your next collection date and the type, and, if the next
 collection date is tomorrow, send a notification via NMA.  It's intended to be
 used as a cron job in the evenings.
 
+*NOTE*: The stevenage.gov.uk webform is specific in it's postcode search. You
+/must/ include the space in the postcode or it won't find your address.
+
