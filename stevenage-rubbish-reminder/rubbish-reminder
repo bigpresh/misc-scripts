@@ -18,8 +18,6 @@ my $mech = WWW::Mechanize->new;
 
 $mech->get('http://www.stevenage.gov.uk/find/');
 
-# warn "Page content before form submit: " . $mech->content;
-
 $mech->submit_form(
     with_fields => {
         # What the fuck kind of field names are these?  Fucking ASP.net
@@ -33,12 +31,9 @@ $mech->submit_form(
 if (my ($date, $type) = $mech->content =~ 
     m{Your next rubbish collection is on <strong>(.+) \((.+)\)</strong>}m)
 {
-    print "Next $type collection on $date\n";
     # Work out if that's tomorrow.
     my $dt = DateTime::Format::DateParse->parse_datetime($date);
-    print "Parsed date to " . $dt->dmy;
     if ($dt->dmy eq DateTime->now->add( days => 1)->dmy) {
-        print "That's tomorrow, send reminder!";
         my $api_keys = ref $conf->{nma_key} eq 'ARRAY'
             ? $conf->{nma_key}
             : [ $conf->{nma_key};
@@ -50,9 +45,7 @@ if (my ($date, $type) = $mech->content =~
             description => "$type collection tomorrow morning ($date)",
         );
         defined( $message->{success} ) or die( $message->{error}->{content} );
-    } else {
-        print "Not tomorrow, #care";
     }
 } else {
-    die $mech->content;
+    die "Failed to identify next collection in response";
 }
