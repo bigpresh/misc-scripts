@@ -1,0 +1,25 @@
+=head1 rubbish-reminder
+
+This is likely only of use for Stevenage residents.
+
+Consults the L<stevenage.gov.uk|http://www.stevenage.gov.uk> website, and checks
+when the next rubbish/recycling collection is, and sends a notification to my
+phone using NotifyMyAndroid L<https://www.notifymyandroid.com/>.
+
+=head2 Configuration
+
+Uses L<Config::Auto> to parse config.
+
+Dump the following into C<~/.rubbish-reminderrc> or any of the other filenames
+that Config::Auto would look for:
+
+    nma_key: ...your NMA API key...
+    house_num: 1
+    postcode: TE57 1NG
+
+(Obviously replacing the fake details with real ones)
+
+It will find out your next collection date and the type, and, if the next
+collection date is tomorrow, send a notification via NMA.  It's intended to be
+used as a cron job in the evenings.
+
