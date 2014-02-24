@@ -36,7 +36,7 @@ if (my ($date, $type) = $mech->content =~
     if ($dt->dmy eq DateTime->now->add( days => 1)->dmy) {
         my $api_keys = ref $conf->{nma_key} eq 'ARRAY'
             ? $conf->{nma_key}
-            : [ $conf->{nma_key};
+            : [ $conf->{nma_key} ];
         my $nma = WebService::NotifyMyAndroid->new;
         my $message = $nma->notify(
             apikey => $api_keys,
