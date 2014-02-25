@@ -9,3 +9,25 @@ have to.
 
 One drawback - Odyssey don't tell you which court the booking is for on their
 site.  Bah.
+
+=head2 USAGE
+
+The script uses L<Config::Auto>, so you'll need to set up a config file it will
+find, for e.g. C<~/.odyssey-bookings-to-gcalrc>, containing for e.g.:
+
+    username: davidp@preshweb.co.uk
+    password: supersecretpassword
+    calendarname: Squash
+
+The calendar name is the name of a calendar within your Google Calendar account
+that bookings should be added to.
+
+You'll also need to add your Google Calendar login details to C<~/.netrc> -
+they're separate as I use various scripts that interact with my Google Calendar,
+and that's where I put the details.
+
+Hmm - now I think about it, it would probably make sense to pull the Odyssey
+account details from there, too, and let the calendar name just be an option
+passed on the command line.  TODO.
+
+
