@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+
+# Log in to Odyssey's members area, go to upcoming bookings, and for each
+# booking found, make sure it's on my calendar.
+
+use 5.010;
+use strict;
+use Config::Auto;
+use HTML::TableExtract;
+use Net::Google::Calendar;
+use Net::Netrc;
+use DateTime::Format::Strptime;
+use WWW::Mechanize;
+use YAML;
+
+# Our config file should contain 'username' and 'password' for our Odyssey
+# members account, and 'calendarname' for the name of the calendar within GCal
+# we want to add events to.  Google Calendar credentials should be in .netrc for
+# calendar.google.com
+my $conf = Config::Auto::parse;
+
+my @conf_params = qw(username password calendarname);
+if (grep { !exists $conf->{$_} } @conf_params) { 
+    die "Config must contain all of @conf_params";
+}
+
+# Get our login details, and find the Google calendar in question:
+my $mach = Net::Netrc->lookup('calendar.google.com')
+    or die "No login details for calendar.google.com in ~/.netrc";
+my ($user, $pass) = $mach->lpa;
+
+
+my $gcal = Net::Google::Calendar->new;
+$gcal->login($user, $pass)
+    or die "Google Calendar login failed";
+
+my ($desired_calendar) = grep { 
+    $_->title eq $conf->{calendarname}
+} $gcal->get_calendars;
+
+if (!$desired_calendar) {
+    die "No calendar named $conf->{calendarname} found!";
+}
+$gcal->set_calendar($desired_calendar);
+
+
+# Right, we have our calendar ready to interact with - now log in to Odyssey
+# and find out what bookings we have...
+my $mech = WWW::Mechanize->new;
+$mech->get('http://members.odysseyhealthclubs.com/Odyssey/login.aspx');
+
+my $stupid_prefix = 'ctl00$mainContent$Login1$';
+$mech->submit_form(
+    with_fields => {
+        $stupid_prefix . 'UserName' => $conf->{username},
+        $stupid_prefix . 'Password' => $conf->{password},
+    },
+    button => $stupid_prefix . 'LoginImageButton',
+);
+$mech->follow_link(text_regex => qr/My Bookings/);
+
+
+my $te = HTML::TableExtract->new(
+    headers => [qw(Start End Description) ]
+);
+$te->parse($mech->content)   
+    or die "Failed to find expected bookings table";
+
+for my $row ($te->rows) {
+    my ($start, $end, $description) = @$row;
+    my $dtparser = DateTime::Format::Strptime->new(
+        pattern   => '%d/%m/%Y %H:%M',
+    );
+    my $start_dt = $dtparser->parse_datetime($start);
+    my $end_dt   = $dtparser->parse_datetime($end);
+    say join ":", $start_dt, $end_dt, $description;
+
+    # Look for an event for this booking already.
+    # Note: start-min is inclusive, start-max exclusive, hence the clone and
+    # adding a second
+    my ($event) = $gcal->get_events(
+        q => qq{"$description"},
+        'start-min' => $start_dt,
+        'start-max' => $end_dt->clone->add(seconds => 1),
+    );
+
+    if (!$event) {
+        my $entry = Net::Google::Calendar::Entry->new;
+        $entry->title("$description at Odyssey");
+        $entry->location("Odyssey, Knebworth, SG2 8DU");
+        $entry->when($start_dt, $end_dt);
+        $entry->reminder('alert', 'hours', 3);
+        $entry->reminder('alert', 'minutes', 10);
+        $gcal->add_entry($entry) and say "Added event $description at $start";
+    } else {
+        say "Event $description at $start already on calendar";
+    }
+}
+

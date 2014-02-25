@@ -1,0 +1,11 @@
+=head1 odyssey-bookings-to-gcal
+
+I'm a member of Odyssey Health & Racquet Club
+(http://www.odysseyhealthclubs.com/).
+
+This script logs in to the Odyssey members area, scrapes the list of bookings
+(e.g. squash courts), and adds them to my Google Calendar for me, so I don't
+have to.
+
+One drawback - Odyssey don't tell you which court the booking is for on their
+site.  Bah.
