@@ -78,7 +78,6 @@ for my $row ($table->rows) {
     );
     my $start_dt = $dtparser->parse_datetime($start);
     my $end_dt   = $dtparser->parse_datetime($end);
-    say join ":", $start_dt, $end_dt, $description;
 
     # Look for an event for this booking already.
     # Note: start-min is inclusive, start-max exclusive, hence the clone and
