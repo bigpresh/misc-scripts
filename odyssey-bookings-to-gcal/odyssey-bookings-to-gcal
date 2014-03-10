@@ -63,10 +63,11 @@ $mech->follow_link(text_regex => qr/My Bookings/);
 my $te = HTML::TableExtract->new(
     headers => [qw(Start End Description) ]
 );
-$te->parse($mech->content)   
+$te->parse($mech->content);
+my ($table) = $te->tables
     or die "Failed to find expected bookings table";
 
-for my $row ($te->rows) {
+for my $row ($table->rows) {
     my ($start, $end, $description) = @$row;
     my $dtparser = DateTime::Format::Strptime->new(
         pattern   => '%d/%m/%Y %H:%M',
