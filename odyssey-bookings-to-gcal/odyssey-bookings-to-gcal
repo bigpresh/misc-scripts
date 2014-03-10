@@ -59,6 +59,10 @@ $mech->submit_form(
 );
 $mech->follow_link(text_regex => qr/My Bookings/);
 
+if ($mech->content =~ /No bookings in this period/) {
+    say "No bookings to process.";
+    exit;
+}
 
 my $te = HTML::TableExtract->new(
     headers => [qw(Start End Description) ]
