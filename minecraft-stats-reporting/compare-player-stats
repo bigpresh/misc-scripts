@@ -13,8 +13,6 @@ use Data::Dump;
 # their stats; then we can walk through and calculate averages and player's
 # ratios from that average
 my @players = @ARGV ? @ARGV : @{ MinecraftStatsParser::get_players(100) };
-say Data::Dump::dump(\@players);
-
 
 my %stats;
 
