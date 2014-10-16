@@ -50,5 +50,18 @@ for my $player (keys %stats) {
     }
 }
 
-say Data::Dump::dump(\%stats);
+# Dump the results, sorted by diamond ratio to look for xrayers
+# TODO: make sort criteria customisable
+# TODO: move most of the average ratio calculation & comparison logic in to
+# MinecraftStatsParser.pm
+say Data::Dump::dump(
+    {
+        map { $_ => $stats{$_} }
+        sort {
+            $stats{$b}{ratio_of_avg}{diamond} 
+            <=>
+            $stats{$a}{ratio_of_avg}{diamond}
+        } keys %stats
+    }
+);
 
