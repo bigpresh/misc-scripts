@@ -1,0 +1,9 @@
+Simple Perl scripts to parse the output of the Bukkit Stats plugin's web
+interface
+
+See http://dev.bukkit.org/bukkit-plugins/lolmewnstats/
+
+Originally written to parse the stats from The-Wild at http://the-wild.tk/ but
+should probably work elsewhere too.
+
+
