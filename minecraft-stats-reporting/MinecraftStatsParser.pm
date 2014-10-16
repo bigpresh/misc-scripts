@@ -16,12 +16,11 @@ my %block_name_by_id = (
 );
 
 
+my $ua = LWP::UserAgent->new;
 
 sub get_stats {
     my $player = shift;
     my %player_stats;
-
-    my $ua = LWP::UserAgent->new;
 
     my $response = $ua->get(
         sprintf "http://the-wild.tk/stats/single_player.php?p=%s",
@@ -55,5 +54,17 @@ sub get_stats {
     return \%player_stats;
 }
 
+sub get_players {
+    my ($player_count) = shift || 50;
+    my $response = $ua->get(
+        "http://the-wild.tk/stats/ajax_player_table.php?"
+        . "iDisplayStart=0&iDisplayLength=$player_count"
+        . "&iColumns=7"
+        . "&iSortCol_0=1&iSortingCols=1&sSortDir_0=desc"
+    );
+    my @players;
+    @players = ($response->content =~ /p=(.+?)\\?"/xmg);
+    return \@players;
+}
 
 
