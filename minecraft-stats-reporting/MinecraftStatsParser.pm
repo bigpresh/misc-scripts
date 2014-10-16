@@ -36,10 +36,8 @@ sub get_stats {
 
     for my $row ($table->rows) {
         my ($block, $block_id, $placed, $broken) = @$row;
-        warn "broke [$broken] '$block_id' blocks";
 
         if (my $block_name = $block_name_by_id{$block_id}) {
-            warn "Interested in $block_name";
             $player_stats{broken}{$block_name} += $broken;
             $player_stats{placed}{$block_name} += $placed if $placed;
         }
