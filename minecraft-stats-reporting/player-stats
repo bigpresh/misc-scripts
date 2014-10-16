@@ -2,8 +2,6 @@
 
 use strict;
 use 5.010;
-use LWP::UserAgent;
-use HTML::TableExtract;
 
 use lib '.';
 use MinecraftStatsParser;
