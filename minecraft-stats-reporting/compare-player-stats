@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+
+use strict;
+use 5.010;
+use List::Util;
+use LWP::UserAgent;
+use HTML::TableExtract;
+
+use lib '.';
+use MinecraftStatsParser;
+
+use Data::Dump;
+
+# Get a list of all players sorted by playtime, by default) and for each, get 
+# their stats; then we can walk through and calculate averages and player's
+# ratios from that average
+my @players = @ARGV ? @ARGV : @{ MinecraftStatsParser::get_players(100) };
+say Data::Dump::dump(\@players);
+
+
+my %stats;
+
+for my $player (@players) {
+    say "Fetching stats for $player...";
+    
+    $stats{$player} = MinecraftStatsParser::get_stats($player);
+}
+
+# Now, first pass, walk through remembering all ratio values we saw:
+my %ratios;
+for my $player (keys %stats) {
+    for my $ratio (keys %{ $stats{$player}{ratio} }) {
+        my $value = $stats{$player}{ratio}{$ratio};
+        push @{ $ratios{$ratio} }, $value;
+    }
+}
+# Now we can calculate the average ratios:
+my %avg_ratio;
+for my $ratio (keys %ratios) {
+    my @values = @{ $ratios{$ratio} };
+    $avg_ratio{$ratio} = List::Util::sum(@values) / scalar @values;
+    say "Average ratio for $ratio is " . $avg_ratio{$ratio};
+}
+
+# Second pass, for each player, work out what ratio each of their ratios is to
+# the average ratio:
+for my $player (keys %stats) {
+    for my $ratio (keys %{ $stats{$player}{ratio} }) {
+        my $value = $stats{$player}{ratio}{$ratio};
+        my $ratio_of_avg = $value / $avg_ratio{$ratio};
+        $stats{$player}{ratio_of_avg}{$ratio} = $ratio_of_avg;
+    }
+}
+
+say Data::Dump::dump(\%stats);
+
