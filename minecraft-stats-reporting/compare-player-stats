@@ -12,7 +12,7 @@ use Data::Dump;
 # Get a list of all players sorted by playtime, by default) and for each, get 
 # their stats; then we can walk through and calculate averages and player's
 # ratios from that average
-my @players = @ARGV ? @ARGV : @{ MinecraftStatsParser::get_players(100) };
+my @players = @ARGV ? @ARGV : @{ MinecraftStatsParser::get_players(4000) };
 
 my %stats;
 
@@ -53,13 +53,13 @@ for my $player (keys %stats) {
 # TODO: move most of the average ratio calculation & comparison logic in to
 # MinecraftStatsParser.pm
 say Data::Dump::dump(
-    {
-        map { $_ => $stats{$_} }
+    (
+        map { { $_ => $stats{$_} } }
         sort {
             $stats{$b}{ratio_of_avg}{diamond} 
             <=>
             $stats{$a}{ratio_of_avg}{diamond}
         } keys %stats
-    }
+    )
 );
 
