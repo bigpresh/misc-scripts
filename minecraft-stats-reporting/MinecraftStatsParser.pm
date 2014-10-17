@@ -10,7 +10,7 @@ my %block_name_by_id = (
     56 => 'diamond',
     14 => 'gold',
     15 => 'iron',
-    13 => 'cobble',
+    4  => 'cobble',
     1  => 'stone',
     27 => 'powered_rail',
 );
