@@ -60,7 +60,8 @@ while ($queue_html =~ m{
     my ($asin) = $product{url} =~ m{asin=(\d+)};
 
     if (!seen_product($asin)) {
-        my $url = "http://vine.amazon.co.uk" . $product{url};
+        my $url = "https://www.amazon.co.uk" . $product{url};
+        $url =~ s/&amp;/&/g;
         push @new_products, "$product{name}: $url\n";
         push @new_asins, $asin;
     }
