@@ -1,0 +1,18 @@
+=head1 vine-queue-watcher
+
+A simple script to fetch the list of reviewable products from Amazon's Vine, and
+send an email when any new items are found.
+
+Expects your Amazon account details to be in C<~/.netrc> under machine
+C<www.amazon.co.uk>, and sends the email to the username given (which should be
+your Amazon account's email address).
+
+=head1 DB Schema
+
+To keep track of which items have already been seen, so it can email only when
+new items are found for the first time, it uses a database; it has been written
+to use MySQL and take your connection details from C<~/.my.cnf>.
+
+There should be a table named C<vine_products_seen> with a schema containing, at
+a minimum, a column named C<asin>; a timestamp column could be added should you
+wish.

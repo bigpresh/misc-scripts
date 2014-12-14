@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+use strict;
+use 5.010;
+
+use DBI;
+use Mail::Sendmail;
+use Net::Netrc;
+use WWW::Mechanize;
+
+# Expects username, password and database params in my.cnf
+my $dbh = DBI->connect(
+    "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf",
+    undef, undef, {RaiseError => 1} 
+) or die "Failed to connect to database";
+
+
+my $mach = Net::Netrc->lookup('www.amazon.co.uk')
+    or die "No login details for www.amazon.co.uk in ~/.netrc";
+my ($user, $pass) = $mach->lpa;
+
+# Have to lie - if we tell the truth with the default WWW::Mech agent, they
+# return a cookies disabled error, even though they're not.
+my $mech = WWW::Mechanize->new(
+    agent => 'Mozilla/ish',
+);
+
+$mech->get('http://vine.amazon.co.uk/');
+
+$mech->submit_form(
+    with_fields => {
+        email => $user,
+        password => $pass,
+    },
+);
+
+$mech->follow_link(text => 'Your Queue')
+    or die "Failed to follow 'Your Queue' link!";
+
+if (!$mech->content =~ /Welcome to your Vine Targeted Queue/) {
+    die "At " . $mech->uri . " - but this doesn't look like the queue page";
+}
+
+#warn "queue  content: " . $mech->content;
+
+# Find all the items.  Using a regex to parse HTML is all kinds of wrong, but
+# this HTML is pretty ugly, and this works, in a lightweight fashion.  May
+# re-write to use Web::Scraper or similar, though.
+my (@new_products, @new_asins);
+my $queue_html = $mech->content;
+while ($queue_html =~ m{
+        <td \s class="product_description".*?>
+        <a \s href="(?<url>.+?)".*?>
+        <b>(?<name> .+?)</b></a><br/>
+        (?<description> .+? )
+        </td>
+    }xgms)
+{
+    my %product = %+;
+    my ($asin) = $product{url} =~ m{asin=(\d+)};
+
+    if (!seen_product($asin)) {
+        my $url = "http://vine.amazon.co.uk" . $product{url};
+        push @new_products, "$product{name}: $url\n";
+        push @new_asins, $asin;
+    }
+}
+
+if (@new_products) {
+    # send email
+    Mail::Sendmail::sendmail(
+        To => $user,
+        From => $user,
+        Subject => scalar(@new_products) . " new Vine products available",
+        message => "New products available for review on Amazon Vine:\n"
+            . join("\n", @new_products),
+    ) or die "Failed to send mail - " . $Mail::Sendmail::error;
+
+    remember_product(\@new_asins);
+}
+
+
+
+# Returns the DB row if we've seen this product before
+sub seen_product {
+    my $asin = shift;
+    my $sth = $dbh->prepare("SELECT * FROM vine_products_seen WHERE asin = ?");
+    $sth->execute($asin);
+    return $sth->fetchrow_hashref;
+}
+
+# Given a product ASIN, remember that we've seen it so we don't report it again
+# on the next run
+sub remember_product {
+    my ($asin) = shift;
+    my $sth = $dbh->prepare(
+        "INSERT INTO vine_products_seen (asin) VALUES (?)"
+    );
+
+    # DWIMmery: if we got an arrayref of ASINs, add them all
+    my @asins = ref $asin ? @$asin : ($asin);
+    for my $asin (@asins) {
+        $sth->execute($asin);
+    }
+}
+
