@@ -57,7 +57,7 @@ while ($queue_html =~ m{
     }xgms)
 {
     my %product = %+;
-    my ($asin) = $product{url} =~ m{asin=(\d+)};
+    my ($asin) = $product{url} =~ m{asin=([A-Z0-9]+)};
 
     if (!seen_product($asin)) {
         my $url = "https://www.amazon.co.uk" . $product{url};
