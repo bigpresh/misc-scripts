@@ -7,8 +7,7 @@ use 5.010;
 # see 
 my $sensor_type = '2302';
 my $gpio_pin = 2;
-my $cmd = "/home/davidp/Adafruit-Raspberry-Pi-Python-Code/Adafruit_DHT_Driver/"
-    . "Adafruit_DHT $sensor_type $gpio_pin";
+my $cmd = "/usr/local/bin/Adafruit_DHT $sensor_type $gpio_pin";
 
 my $mode = shift;
 my ($location,$type) = $0 =~ /(\w+)_(\w+)$/;
@@ -62,7 +61,7 @@ CONFIG
             print "$type.value " . $+{$type};
             exit;
         } else {
-            warn "No result found: $result";
+            warn "No $type result found!  Returnval $!, result [$result]";
         }
     }
 }
