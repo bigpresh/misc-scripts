@@ -61,7 +61,7 @@ CONFIG
             print "$type.value " . $+{$type};
             exit;
         } else {
-            warn "No $type result found!  Returnval $!, result [$result]";
+            warn "No $type result found!  Returnval $?, result [$result]";
         }
     }
 }
