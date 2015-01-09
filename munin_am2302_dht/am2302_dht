@@ -30,8 +30,6 @@ my $reading_specs = $types{$type}
     or die "Invalid type '$type', must be one of: "
         . join(",", keys %types);
 
-say "want to read $type for $location";
-
 if ($mode eq "autoconf") {
     say "yes";
     exit;
