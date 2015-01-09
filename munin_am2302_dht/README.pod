@@ -29,11 +29,12 @@ these parameters properly etc.
 =head2 Configuring
 
 To use it from Munin, copy it somewhere (your Munin plugins dir, e.g.
-C</usr/share/munin/plugins> or elsewhere) then, in your Munin plugins dir, place
-symlinks to it with the name as location_readingtype - for instance, I have two
-symlinks, C<shed_temperature> and C<shed_humidity>.  The script uses the name it
-was called as to find out the location name and which reading is required.
-(This way you don't need to do anything clever in your Munin config.)
+C</usr/share/munin/plugins> or elsewhere) then, in your Munin Node config
+plugins dir, e.g. C</etc/munin/plugins>, place symlinks to it with the name as 
+location_readingtype - for instance, I have two symlinks, C<shed_temperature> 
+and C<shed_humidity>.  The script uses the name it was called as to find out 
+the location name and which reading is required. (This way you don't need to 
+do anything clever in your Munin config.)
 
 =head2 Help / Support
 
