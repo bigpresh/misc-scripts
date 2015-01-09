@@ -48,6 +48,8 @@ graph_info $location  $label in $unit
 graph_category Sensors
 graph_args --rigid --lower-limit $lower --upper-limit $upper
 $type.label $label
+$type.min $lower
+$type.max $upper
 CONFIG
     exit;
 } else {
