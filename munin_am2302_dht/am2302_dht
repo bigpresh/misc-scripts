@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+
+use strict;
+use 5.010;
+
+# the Adafruit DHT driver util thing:
+# see 
+my $sensor_type = '2302';
+my $gpio_pin = 2;
+my $cmd = "/home/davidp/Adafruit-Raspberry-Pi-Python-Code/Adafruit_DHT_Driver/"
+    . "Adafruit_DHT $sensor_type $gpio_pin";
+
+my $mode = shift;
+my ($location,$type) = $0 =~ /(\w+)_(\w+)$/;
+
+my %types = (
+    temperature => {
+        unit => 'degC',
+        range_min => -25,
+        range_max => 40,
+    },
+    humidity => {
+        unit => '%',
+        range_min => 0,
+        range_max => 100,
+    },
+);
+
+my $reading_specs = $types{$type}
+    or die "Invalid type '$type', must be one of: "
+        . join(",", keys %types);
+
+say "want to read $type for $location";
+
+if ($mode eq "autoconf") {
+    say "yes";
+    exit;
+} elsif ($mode eq "config") {
+    my $label = ucfirst $type;
+    $location = ucfirst $location;
+    my $unit = $reading_specs->{unit};
+    my $lower = $reading_specs->{range_min};
+    my $upper = $reading_specs->{range_max};
+    print <<CONFIG;
+graph_title $location $label
+graph_vlabel $unit
+graph_info $location  $label in $unit
+graph_category Sensors
+graph_args --lower-limit $lower --upper-limit $upper
+$type.label $label
+CONFIG
+    exit;
+} else {
+    my $tries;
+    while ($tries++ < 10) {
+        my $result = `$cmd 2>/dev/null`;
+        if ($result =~ m{
+            Temp \s =\s+ (?<temperature>\S+)
+            .+
+            Hum \s = \s+ (?<humidity>\S+)
+        }x) {
+            print "$type.value " . $+{$type};
+            exit;
+        } else {
+            warn "No result found: $result";
+        }
+    }
+}
+
+
