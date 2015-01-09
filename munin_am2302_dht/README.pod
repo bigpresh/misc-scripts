@@ -10,7 +10,15 @@ The plugin uses the Adafruit drives which you can check out from:
 
 L<git://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git>
 
-In particular it executes the C<Adafruit_DHT> driver to read the values.
+For more info on this Adafruit repo, see its GitHub page with a README:
+
+L<https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code>
+
+In particular it executes the C<Adafruit_DHT> driver from the above repo to read
+the values - a direct link to the driver itself is:
+
+L<https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code/tree/master/Adafruit_DHT_Driver>
+
 
 At the moment the path to C<Adafruit_DHT>, sensor type and GPIO PIN are
 hardcoded in vars at the top of the script, which is a bit lazy, but  I wrote
