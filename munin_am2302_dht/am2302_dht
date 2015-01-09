@@ -46,7 +46,7 @@ graph_title $location $label
 graph_vlabel $unit
 graph_info $location  $label in $unit
 graph_category Sensors
-graph_args --lower-limit $lower --upper-limit $upper
+graph_args --rigid --lower-limit $lower --upper-limit $upper
 $type.label $label
 CONFIG
     exit;
