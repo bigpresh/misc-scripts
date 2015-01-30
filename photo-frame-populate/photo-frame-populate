@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+# Walk through all the files (well, symlinks) in the input dir, and if a file of
+# that name doesn't exist in the output dir, use imagemagick's convert tool to
+# resize and auto-rotate the input file and write the result to the output dir.
+
+use strict;
+use File::Find;
+use File::Spec;
+use File::Which;
+
+my $desired_res = '1024x768';
+
+if (!File::Which::which('convert')) {
+    die "'convert' util not in \$PATH - ImageMagick not installed?\n";
+}
+
+my ($in_dir, $out_dir) = @ARGV;
+if (!$in_dir || !$out_dir) {
+    die "Usage: $0 input-dir output-dir\n";
+}
+for ($in_dir, $out_dir) {
+    if (!-d $_) {
+        die "No such directory $_\n";
+    }
+}
+if (!-w $out_dir) {
+    die "Cannot write to $out_dir\n";
+}
+
+File::Find::find(\&process_image, $in_dir);
+
+sub process_image {
+    my ($file, $file_path) = ( $_, $File::Find::name );
+    say "Considering $file";
+
+    if (my $link_dest = readlink($file_path)) {
+        $file_path = $link_dest;
+    }
+
+    my $out_path = File::Spec->catfile($out_dir, $file);
+    if (-e $out_path) {
+        warn "$out_path already exists, skip";
+        return;
+    }
+
+    say "Processing $file...";
+    my @convert_args = (
+        "$file_path", 
+        "-auto-orient",
+        "-resize",
+        $desired_res,
+        $out_path,
+    );
+    system("convert", @convert_args) == 0
+        or warn "convert execution failed - $?";
+
+}
+
