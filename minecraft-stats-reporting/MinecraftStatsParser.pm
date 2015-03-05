@@ -44,7 +44,7 @@ sub get_stats {
         }
     }
 
-    for (qw(diamond gold)) {
+    for (qw(diamond gold iron coal)) {
         if ($player_stats{broken}{$_}) {
         $player_stats{ratio}{$_} = sprintf '%.4f', 
             $player_stats{broken}{$_} / $player_stats{broken}{stone};
