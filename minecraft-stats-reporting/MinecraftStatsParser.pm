@@ -10,6 +10,7 @@ my %block_name_by_id = (
     56 => 'diamond',
     14 => 'gold',
     15 => 'iron',
+    16 => 'coal',
     4  => 'cobble',
     1  => 'stone',
     27 => 'powered_rail',
@@ -48,7 +49,7 @@ sub get_stats {
         }
     }
 
-    for (qw(diamond gold iron coal)) {
+    for (qw(diamond gold iron coal emerald redstone lapis)) {
         if ($player_stats{broken}{$_}) {
         $player_stats{ratio}{$_} = sprintf '%.4f', 
             $player_stats{broken}{$_} / $player_stats{broken}{stone};
