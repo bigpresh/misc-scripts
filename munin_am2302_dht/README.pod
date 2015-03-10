@@ -1,0 +1,53 @@
+=head1 am2302_dht humidity/temperature monitoring
+
+This is a simple Munin plugin to monitor and graph temperature and humidity
+readings from an AM2302 temperature and humidity sensor.
+
+The AM2302 is a simple, cheap and effective device for monitoring temperature
+and humidity from a single device.
+
+The plugin uses the Adafruit drives which you can check out from:
+
+L<git://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git>
+
+For more info on this Adafruit repo, see its GitHub page with a README:
+
+L<https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code>
+
+In particular it executes the C<Adafruit_DHT> driver from the above repo to read
+the values - a direct link to the driver itself is:
+
+L<https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code/tree/master/Adafruit_DHT_Driver>
+
+
+At the moment the path to C<Adafruit_DHT>, sensor type and GPIO PIN are
+hardcoded in vars at the top of the script, which is a bit lazy, but  I wrote
+this for my own use and then decided to shove it here in case it's useful to
+anyone else.  If I get feedback from others using it, I may refactor it to take
+these parameters properly etc.
+
+=head2 Configuring
+
+To use it from Munin, copy it somewhere (your Munin plugins dir, e.g.
+C</usr/share/munin/plugins> or elsewhere) then, in your Munin Node config
+plugins dir, e.g. C</etc/munin/plugins>, place symlinks to it with the name as 
+location_readingtype - for instance, I have two symlinks, C<shed_temperature> 
+and C<shed_humidity>.  The script uses the name it was called as to find out 
+the location name and which reading is required. (This way you don't need to 
+do anything clever in your Munin config.)
+
+=head2 Help / Support
+
+I wrote this hastily for my own purposes, for a Raspberry Pi I have in my shed,
+monitoring the temperature and humidity using an AM2302, and also external
+temperatures using 1-wire sensors.  So, it's not as good as code I'd have
+written initially planning to release.  That said, it works for me, and may be
+useful to you.  If it is, I'd be very grateful to know, if you have a moment to
+drop me a quick "hey, I'm using this and it works" email, that would be awesome.
+If it's not working for you and you want help, I'll see what I can do.
+
+=head2 AUTHOR
+
+David Precious C<davidp@preshweb.co.uk>
+
+
