@@ -14,6 +14,10 @@ my %block_name_by_id = (
     1  => 'stone',
     27 => 'powered_rail',
     49 => 'obsidian',
+    129 => 'emerald',
+    21 => 'lapis',
+    73 => 'redstone', # unlit
+    74 => 'redstone', # lit-up
 );
 
 
