@@ -15,7 +15,7 @@
 # Usage: symlink it in your Munin plugins dir with a suffix denoting which stat
 # to monitor (players,chunks,entities,tps)
 # Edit /etc/munin/plugin-conf.d/munin-node and add:
-# [lagcheck-log-munin_*]
+# [lagmeter-log-munin_*]
 # env.LAGMETER_LOGFILE /path/to/plugins/LagMeter/lag.log
 
 use strict;
