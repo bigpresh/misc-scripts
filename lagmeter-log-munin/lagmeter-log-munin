@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+# A simple Munin plugin to graph stats from the log file written by the LagMeter
+# server plugin:
+# http://dev.bukkit.org/bukkit-plugins/lagmeter/
+#
+# A simple and fast way for Munin to obtain and graph stats without messing
+# about with RCON and spamming the server logs with RCON connections, etc.
+#
+# Author: David Precious (BIGPRESH) <davidp@preshweb.co.uk>
+# Released under the Perl Artistic Licence:
+# http://dev.perl.org/licenses/artistic.html
+# Original version 10th February 2016.
+#
+# Usage: symlink it in your Munin plugins dir with a suffix denoting which stat
+# to monitor (players,chunks,entities,tps)
+# Edit /etc/munin/plugin-conf.d/munin-node and add:
+# [lagcheck-log-munin_*]
+# env.LAGMETER_LOGFILE /path/to/plugins/LagMeter/lag.log
+
+use strict;
+use File::ReadBackwards;
+
+my ($stat) = $0 =~ /_(\w+)$/;
+my $filename = $ENV{LAGMETER_LOGFILE}
+    or die "Set env.LAGMETER_LOGFILE in your munin config";
+
+my %stat_re = (
+    players => qr{Players online: (\d+)/\d+},
+    chunks  => qr{Total chunks loaded: (\d+)},
+    entities => qr{Total entities: (\d+)},
+    tps      => qr{TPS: (\d+)},
+);
+
+
+if (!$stat_re{$stat}) {
+   die "End of symlink should be _statname, one of: "
+        . join ',', sort keys %stat_re;
+}
+
+if ($ARGV[0] eq 'config') {
+    print <<CONFIG;
+graph_title Minecraft $stat
+graph_vlabel $stat
+graph_category minecraft
+config = True
+CONFIG
+    exit;
+}
+
+my $bw = File::ReadBackwards->new($filename)
+    or die "Failed to open $filename - $!";
+
+my $last_entry;
+
+while( defined( my $log_line = $bw->readline ) ) {
+    last if $log_line =~ /^$/ && length $last_entry;
+    $last_entry .= $log_line;
+}
+
+my ($stat_value) = $last_entry =~ $stat_re{$stat};
+
+print "$stat=$stat_value\n";
+
