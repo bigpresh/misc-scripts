@@ -5,11 +5,11 @@
 # David Precious <davidp@preshweb.co.uk>
 use strict;
 use FileHandle;
-use Nagios::Plugin;
+use Monitoring::Plugin;
 use JSON;
 
 
-my $np = Nagios::Plugin->new(
+my $np = Monitoring::Plugin->new(
     shortname => 'CHECKNETERRORS',
     'usage' => "%s -i eth0",
 );

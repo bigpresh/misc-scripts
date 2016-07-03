@@ -16,10 +16,10 @@
 # nagios  ALL=  NOPASSWD: /usr/local/bin/tw_cli
 
 use strict;
-use Nagios::Plugin;
+use Monitoring::Plugin;
 use FileHandle;
 
-my $np = Nagios::Plugin->new(
+my $np = Monitoring::Plugin->new(
     shortname => "RAIDCHECK",
     usage => "%s [--verbose][--tw_cli]",
 );

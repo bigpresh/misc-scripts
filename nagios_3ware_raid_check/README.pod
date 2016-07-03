@@ -16,7 +16,7 @@ monitor - it will just Do The Right Thing.
 
 =head2 REQUIREMENTS
 
-Besides the obvious (Nagios/NRPE, Perl, and and the C<Nagios::Plugin> module
+Besides the obvious (Nagios/NRPE, Perl, and and the C<Monitoring::Plugin> module
 from CPAN), you'll also need 3ware's C<tw_cli> utility.
 
 =head3 tw_cli utility from 3ware/LSI

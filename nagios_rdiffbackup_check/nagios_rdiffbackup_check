@@ -6,11 +6,11 @@
 # David Precious <davidp@preshweb.co.uk>
 
 use strict;
-use Nagios::Plugin;
+use Monitoring::Plugin;
 use FileHandle;
 use Time::Duration;
 
-my $np = Nagios::Plugin->new(
+my $np = Monitoring::Plugin->new(
     shortname => "CHECKRDIFFBACKUP",
     usage => "%s -w 4h -c 12h -d /path/to/backup",
 );
