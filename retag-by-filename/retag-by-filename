@@ -18,9 +18,11 @@ my @option_specs = (
     Getopt::Lucid::Switch('verbose|v'),
     Getopt::Lucid::Switch('dry-run|dryrun|d'),
     Getopt::Lucid::List('set-only|setonly|s'),
-    Getopt::Lucid::Param('pattern|p')->required(),
+    Getopt::Lucid::Param('pattern|p'),
 );
 my $opt = Getopt::Lucid->getopt(\@option_specs);
+$opt->validate( requires => ['pattern'] );
+
 my $pattern_val = $opt->get_pattern;
 my $pattern = qr/$pattern_val/xmsi       # lack of \Q..\E here is intentional.
     or die "Failed to parse pattern";
