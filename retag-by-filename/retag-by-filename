@@ -21,7 +21,7 @@ my @option_specs = (
     Getopt::Lucid::Param('pattern|p'),
 );
 my $opt = Getopt::Lucid->getopt(\@option_specs);
-$opt->validate( requires => ['pattern'] );
+$opt->validate( { requires => ['pattern'] } );
 
 my $pattern_val = $opt->get_pattern;
 my $pattern = qr/$pattern_val/xmsi       # lack of \Q..\E here is intentional.
