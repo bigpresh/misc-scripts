@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use DBI;
+use JSON;
+
+# A script intended to be fed the output from rtl_433 -G -F JSON
+#
+# Each time a line of JSON is received, parse it, and insert a record in the
+# database.
+#
+# Expects DB connection details in ~/.my.cnf
+
+
+line:
+while (my $line = <>) {
+    my $data;
+    eval { $data = JSON::from_json($line); 1 }
+        or do {
+            warn "Failed to parse line: $line";
+            next line;
+        };
+
+    if (exists $data->{temperature_C}) {
+        if ($data->{model} eq 'THGR122N' && $data->{channel} eq 3) {
+            my $sensor_name = "Garden";
+            temp_insert_sth()->execute(
+                $sensor_name, @$data{qw(temperature_C humidity battery)},
+            ) or warn "DB insert failed: " . get_db()->errstr;
+        } else {
+            warn "Temperature event from unrecognised sensor: $line";
+        }
+    } else {
+        warn "Unrecognised event: $line";
+    }       
+
+}
+
+{
+    my $dbh;
+    sub get_db {
+        if ($dbh && $dbh->ping) {
+            return $dbh;
+        } else {
+            $dbh = DBI->connect(
+                "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf",
+            );
+            return $dbh;
+        }
+    }
+    sub temp_insert_sth {
+        my $dbh = get_db();
+        my $sth = $dbh->prepare(<<SQL);
+INSERT INTO temperature_records (
+    timestamp, sensor, temp_c, humidity_pc, battery_state
+) values (
+    now(), ?,?,?,?
+)
+SQL
+        return $sth;
+    }
+}
+
+
+
