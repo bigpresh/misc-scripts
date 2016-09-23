@@ -1,0 +1,67 @@
+=head1 munin_db_query
+
+A simple Munin plugin which can be fed an SQL query (which should return one row
+with one column), which just executes it and returns the result.
+
+A trivial way to e.g. graph the latest reading from a table of values.
+
+=head1 USAGE
+
+Symlink it under C</etc/munin/plugins> with the desired name.
+
+In C</etc/munin/plugin-conf.d/munin-node>, add a section with the name of the
+symlink you created, with the following env vars - this is a live working
+example from my home server:
+
+    [garden_temp]
+    env.title Outdoor temperature
+    env.label Temperature
+    env.vlabel Temperature (C)
+    env.category Environment
+    env.query select temp_c from temperature_records order by timestamp desc limit 1
+    env.dsn DBI:mysql:davidp
+    env.db_user munin
+
+
+=head1 Env vars
+
+The environment vars used to control the plugin (see above for how to set them
+in the munin-node config) are:
+
+=over
+
+=item title
+
+The title for the graph - shown across the top of the graph
+
+=item vlabel
+
+The label for the data being plotted (labels the Y axis)
+
+=item label
+
+The label for the value - i.e. shown in the graph legend.  Defaults to
+the same as C<vlabel>.
+
+=item category
+
+The category for this graph.  If not specified, defaults to "Database queries".
+
+=item query
+
+The SQL query to run.
+
+=item dsn
+
+The DSN to pass to L<DBI>.
+
+=item db_user
+
+Optional, the username to connect as
+
+=item db_pass
+
+Optional, the password to use
+
+=back
+

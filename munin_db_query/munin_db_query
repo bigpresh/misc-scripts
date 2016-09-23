@@ -1,0 +1,45 @@
+#!/usr/bin/env perl
+
+use strict;
+use 5.010;
+
+use DBI;
+
+my $mode = shift;
+
+# Make sure the required env vars are present:
+unless ($ENV{title} && $ENV{vlabel} && $ENV{query} && $ENV{dsn}) {
+    die "Must set all env vars: title,label,query,dsn";
+}
+
+my $dbh = DBI->connect($ENV{dsn}, $ENV{db_user}, $ENV{db_pass})
+    or die "Failed to connect with DSN '$ENV{dsn}'";
+
+
+if ($mode eq "autoconf") {
+    say "yes";
+    exit;
+} elsif ($mode eq "config") {
+    my $category = $ENV{category} || 'Database queries';
+    my $info     = $ENV{info} || "$ENV{title} ($ENV{label})";
+    my $label    = $ENV{label} || $ENV{vlabel};
+    print <<CONFIG;
+graph_title $ENV{title}
+graph_vlabel $ENV{vlabel}
+graph_info $info
+graph_category $category
+value.label $label
+CONFIG
+    exit;
+} else {
+    my @cols = $dbh->selectrow_array($ENV{query})
+        or die "SQL query failed: " . $dbh->errstr;
+
+    if (@cols != 1) {
+        die "Expected exactly one column";
+    }
+
+    print "$ENV{label}.value $cols[0]\n";
+    exit;
+}
+
