@@ -9,7 +9,7 @@ my $mode = shift;
 
 # Make sure the required env vars are present:
 unless ($ENV{title} && $ENV{vlabel} && $ENV{query} && $ENV{dsn}) {
-    die "Must set all env vars: title,label,query,dsn";
+    die "Must set all env vars: title,vlabel,query,dsn";
 }
 
 my $dbh = DBI->connect($ENV{dsn}, $ENV{db_user}, $ENV{db_pass})
@@ -39,7 +39,7 @@ CONFIG
         die "Expected exactly one column";
     }
 
-    print "$ENV{label}.value $cols[0]\n";
+    print "value.value $cols[0]\n";
     exit;
 }
 
