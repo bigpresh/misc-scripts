@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+
+# Called with no arguments, outputs the path to the currently playing song.
+#
+# Called with arguments, performs an action on the currently playing song.
+#
+# Currently-supported commands:
+# copy <new path> - copies the file to the path specified
+# delete - deletes the file (TODO: tell MPD about the deletion)
+
+use strict;
+use warnings;
+use Audio::MPD;
+use File::Copy;
+
+my $mpd = Audio::MPD->new;
+
+if (!$mpd) {
+    die "Failed to connect to MPD";
+}
+
+my $song = $mpd->current();
+
+if (!$song) {
+    die "No current song (not currently playing?";
+}
+
+my $command = shift @ARGV || '';
+{
+    'copy' => \&copy_file,
+    'delete' => \&delete_file,
+    '' => \&display_file,
+}->{$command}($song);
+
+
+sub display_file { say shift->file };
+sub copy_file    {
+    File::Copy::copy(shift->file, shift @ARGV) or die "Copy failed - $!";
+};
+sub delete_file  { unlink(shift->file) or die "Delete failed - $!" };
+
+
+
