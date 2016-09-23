@@ -10,10 +10,10 @@
 
 use strict;
 use FileHandle;
-use Nagios::Plugin;
+use Monitoring::Plugin;
 
 
-my $np = Nagios::Plugin->new(
+my $np = Monitoring::Plugin->new(
     shortname => 'CHECKSMARTLOG',
     'usage' => "%s -d sda",
 );
