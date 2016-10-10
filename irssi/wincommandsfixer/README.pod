@@ -1,0 +1,14 @@
+=head1 wincommandsfixer.pl
+
+A Perl script for Irssi, to catch typo'd C</win> commands and DTRT.
+
+Too many times, I've accidentally sent e.g. C<win 22> to a channel, when I meant
+to use the command C</win 22> to switch windows.
+
+This script catches these typos, stops the signal so it doesn't get sent to the
+channel, and executes the desired window switch command for you instead.
+
+=head1 AUTHOR
+
+David Precious (BIGPRESH) C<< <davidp@preshweb.co.uk> >>
+ 
