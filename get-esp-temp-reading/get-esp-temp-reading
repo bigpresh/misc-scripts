@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+
+# Fetch a temperature/humidity reading from an ESP8266 running my code and store
+# it in the readings database.
+#
+# Takes a few readings and averages them, to avoid silly readings.
+#
+# Expects MySQL connection details in ~/.my.cnf
+
+use strict;
+
+use DBI;
+use LWP::UserAgent;
+use List::Util;
+use JSON;
+
+
+my $hostname = shift
+    or die "Usage: $0 esp-hostname";
+
+my $ua = LWP::UserAgent->new( timeout => 5 );
+
+
+# Poll 5 times for readings to help smooth out random bullshit readings
+# TODO: should we discard obvious outliers?
+my @temperatures;
+my @humidities;
+
+for (1..5) {
+    my $response = $ua->get("http://$hostname/");
+    if (!$response->is_success) {
+        warn "Failed request to $hostname - " . $response->status_line;
+        sleep 10;
+        redo;
+    }
+    if ($response->content =~ /timeout/) {
+        warn "DHT reading timeout";
+        sleep 2;
+        redo;
+    }
+
+    #my $data = JSON::decode_json($response->content);
+
+    # FIXME: use JSON::decode_json() once I've fixed my Lua firmware to output
+    # real JSON
+    my $data = {};
+    @$data{qw(temp humidity)} = $response->content =~ /temp:(.+),humidity:(.+)/;
+
+    push @temperatures, $data->{temp};
+    push @humidities,   $data->{humidity};
+    sleep 1;
+}
+
+my $avg_temp = List::Util::sum(@temperatures) / scalar @temperatures;
+my $avg_hum  = List::Util::sum(@humidities)   / scalar @humidities;
+
+my $dbh = DBI->connect(
+    "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf"
+) or die "Failed to connect to DB! $DBI::errstr";
+
+
+$dbh->do(qq{
+    INSERT INTO temperature_records (
+        timestamp, sensor, temp_c, humidity_pc
+    ) VALUES (
+        NOW(), ?, ?, ?
+    )
+}, {},$hostname, $avg_temp, $avg_hum
+) or die "DB insert failed - " . $dbh->errstr;
+
