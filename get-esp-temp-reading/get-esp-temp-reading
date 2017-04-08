@@ -15,6 +15,10 @@ use List::Util;
 use JSON;
 
 
+$SIG{ALRM}  = die "timeout\n";
+
+alarm 15;
+
 my $hostname = shift
     or die "Usage: $0 esp-hostname";
 
