@@ -34,6 +34,14 @@ while (my $line = <>) {
         if ($data->{model} eq 'RF-tech') {
             # Gate sensor triggered (gate open) 
             warn "Gate open trigger";
+
+            # First hit up my internal TTS alerting API
+            $ua->post(
+                "http://magic-pi:3002/speak",
+                { message => "Garden gate opened" },
+            );
+
+            # Now, send alart to my phone too
             my $creds = Net::Netrc->lookup('notifymyandroid.com');
             if ($creds) {
                 my $api_key = $creds->login;
