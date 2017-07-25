@@ -15,7 +15,7 @@ use List::Util;
 use JSON;
 
 
-$SIG{ALRM}  = die "timeout\n";
+$SIG{ALRM}  = sub { die "timeout\n" };
 
 alarm 15;
 
