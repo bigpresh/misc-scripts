@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+
+# Fetch a temperature reading from an RM Pro, via broadlink-http-rest,
+# and store it in the readings database.
+#
+# Takes a few readings and averages them, to avoid silly readings.
+#
+# Expects MySQL connection details in ~/.my.cnf
+#
+# Call it with the sensor name and the hostname & port that broadlink-http-rest
+# is running on, e.g. ... lounge supernova:9898
+
+use strict;
+
+use DBI;
+use LWP::UserAgent;
+use List::Util;
+use JSON;
+
+
+$SIG{ALRM}  = sub { die "timeout\n" };
+
+alarm 15;
+
+my ($sensor_name, $hostname) = @ARGV
+    or die "Usage: $0 readingname host:port";
+
+my $ua = LWP::UserAgent->new( timeout => 5 );
+
+
+# Poll 5 times for readings to help smooth out random bullshit readings
+# TODO: should we discard obvious outliers?
+my @temperatures;
+
+for (1..3) {
+    my $response = $ua->get("http://$hostname/getStatus/temperature");
+    if (!$response->is_success) {
+        warn "Failed request to $hostname - " . $response->status_line;
+        sleep 10;
+        redo;
+    }
+
+    my $data = JSON::decode_json($response->content);
+
+
+    push @temperatures, $data->{temperature};
+    sleep 1;
+}
+
+my $avg_temp = List::Util::sum(@temperatures) / scalar @temperatures;
+
+
+my $dbh = DBI->connect(
+    "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf"
+) or die "Failed to connect to DB! $DBI::errstr";
+
+
+$dbh->do(qq{
+    INSERT INTO temperature_records (
+        timestamp, sensor, temp_c
+    ) VALUES (
+        NOW(), ?, ?
+    )
+}, {}, $sensor_name, $avg_temp
+) or die "DB insert failed - " . $dbh->errstr;
+
