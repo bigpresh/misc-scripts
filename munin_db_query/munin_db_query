@@ -1,5 +1,11 @@
 #!/usr/bin/env perl
 
+# A dirty Munin plugin to produce graphs based on database queries.
+#
+# Symlink it into /etc/nagios/plugins, and add env vars in
+# /etc/munin/plugin-conf.d/munin-node in a section named after the name you
+# symlinked it as, containing the env vars as per the README.
+
 use strict;
 use 5.010;
 
@@ -8,8 +14,16 @@ use DBI;
 my $mode = shift;
 
 # Make sure the required env vars are present:
-unless ($ENV{title} && $ENV{vlabel} && $ENV{query} && $ENV{dsn}) {
-    die "Must set all env vars: title,vlabel,query,dsn";
+unless ($ENV{title} && $ENV{vlabel} && $ENV{dsn}
+    && ($ENV{query} || $ENV{query1})) {
+    die "Must set all env vars: title,vlabel,query (or query1,query2,..),dsn";
+}
+
+# If we got only query and maybe label, turn that into query1 and label1, to
+# simplify things later on
+if ($ENV{query}) {
+    $ENV{query1} = delete $ENV{query};
+    $ENV{label1} = delete $ENV{label} || $ENV{vlabel};
 }
 
 my $dbh = DBI->connect($ENV{dsn}, $ENV{db_user}, $ENV{db_pass})
@@ -22,24 +36,32 @@ if ($mode eq "autoconf") {
 } elsif ($mode eq "config") {
     my $category = $ENV{category} || 'Database queries';
     my $info     = $ENV{info} || "$ENV{title} ($ENV{label})";
-    my $label    = $ENV{label} || $ENV{vlabel};
     print <<CONFIG;
 graph_title $ENV{title}
 graph_vlabel $ENV{vlabel}
 graph_info $info
 graph_category $category
-value.label $label
 CONFIG
-    exit;
-} else {
-    my @cols = $dbh->selectrow_array($ENV{query})
-        or die "SQL query failed: " . $dbh->errstr;
 
-    if (@cols != 1) {
-        die "Expected exactly one column";
+    for my $i (1..100) {
+        last unless exists $ENV{"label$i"};
+        print $ENV{"value$i"} = $ENV{"label$i"};
     }
+    exit;
 
-    print "value.value $cols[0]\n";
+} else {
+    for my $i (1..100) {
+        last unless $ENV{"query$i"};
+
+        my @cols = $dbh->selectrow_array($ENV{"query$i"})
+            or die "SQL query failed: " . $dbh->errstr;
+
+        if (@cols != 1) {
+            die "Expected exactly one column";
+        }
+
+        print "value$i.value $cols[0]\n";
+    }
     exit;
 }
 
