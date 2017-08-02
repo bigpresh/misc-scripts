@@ -22,6 +22,9 @@ example from my home server:
     env.dsn DBI:mysql:davidp
     env.db_user munin
 
+If you wish to graph multiple values on the same graph, then instead of
+C<env.query> and C<env.label>, use pairs of e.g. C<env.query1> and C<env.label1>,
+C<env.query2> and C<env.label2>, etc.
 
 =head1 Env vars
 
@@ -41,7 +44,8 @@ The label for the data being plotted (labels the Y axis)
 =item label
 
 The label for the value - i.e. shown in the graph legend.  Defaults to
-the same as C<vlabel>.
+the same as C<vlabel>.  If you are graphing multiple values, then instead use
+C<label1>, C<label2> etc.
 
 =item category
 
@@ -49,7 +53,9 @@ The category for this graph.  If not specified, defaults to "Database queries".
 
 =item query
 
-The SQL query to run.
+The SQL query to run.  If you are graphing multiple values, instead use
+C<query1>, C<query2> etc, and be sure to also supply C<label1>, C<label2> etc
+to label what each reading is.
 
 =item dsn
 
