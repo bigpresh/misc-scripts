@@ -26,6 +26,7 @@ if ($ENV{query}) {
     $ENV{label1} = delete $ENV{label} || $ENV{vlabel};
 }
 
+
 my $dbh = DBI->connect($ENV{dsn}, $ENV{db_user}, $ENV{db_pass})
     or die "Failed to connect with DSN '$ENV{dsn}'";
 
@@ -45,7 +46,7 @@ CONFIG
 
     for my $i (1..100) {
         last unless exists $ENV{"label$i"};
-        print qq{value$i = $ENV{"label$i"}\n};
+        print qq{value$i.label $ENV{"label$i"}\n};
     }
     exit;
 
