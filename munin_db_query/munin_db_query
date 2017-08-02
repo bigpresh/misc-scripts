@@ -45,7 +45,7 @@ CONFIG
 
     for my $i (1..100) {
         last unless exists $ENV{"label$i"};
-        print $ENV{"value$i"} = $ENV{"label$i"};
+        print qq{value$i = $ENV{"label$i"}\n};
     }
     exit;
 
