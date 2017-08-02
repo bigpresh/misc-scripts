@@ -54,7 +54,7 @@ CONFIG
         last unless $ENV{"query$i"};
 
         my @cols = $dbh->selectrow_array($ENV{"query$i"})
-            or die "SQL query failed: " . $dbh->errstr;
+            or die "SQL query $i failed: " . $dbh->errstr;
 
         if (@cols != 1) {
             die "Expected exactly one column";
