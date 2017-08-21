@@ -50,6 +50,10 @@ for (1..5) {
     my $data = {};
     @$data{qw(temp humidity)} = $response->content =~ /temp:(.+),humidity:(.+)/;
 
+    if ($data->{humdity} > 100 || $data->{temp} > 50) {
+        redo;
+    }
+
     push @temperatures, $data->{temp};
     push @humidities,   $data->{humidity};
     sleep 1;
