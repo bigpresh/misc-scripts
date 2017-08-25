@@ -1,0 +1,36 @@
+=head1 NAME
+
+check_mysql_stats - Nagios plugin for MySQL status monitoring
+
+=head1 FEATURES
+
+Why this, instead of the basic check_mysql?
+
+=over
+
+=item Check specific stats against thresholds
+
+Want to just check the number of open tables is in a range you expect?
+
+Sure, just C<-s 'Open tables:10:200' -t 20> - if the number of tables is less
+than 10 or more than 200, you'll get an alarm - a WARNING if it's just outside,
+a CRITICAL if it's outside by more than 20%.  You can repeat C<-s> parameters to
+check as many different stats (as returned by C<mysqladmin status> as you wish.
+
+=item Returns perfdata
+
+Using nagiosgraph or Graphios to get metrics graphing from Nagios?  This plugin
+will return perfdata, either for all stats if no specific stats were named to
+check, or for the stat(s) named otherwise.
+
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
+
+=head1 FEEDBACK
+
+Feedback very much welcomed.  Do feel free to drop me an email and let me know
+if this is useful to you!
+

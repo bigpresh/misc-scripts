@@ -1,0 +1,105 @@
+#!/usr/bin/env perl
+
+use strict;
+use Monitoring::Plugin;
+
+my $np = Monitoring::Plugin->new(
+    shortname => 'CHECKMYSQL',
+    usage => '%s -s|--stat',
+);
+
+# To tell the plugin acceptable ranges for one or more stats from the
+# 'mysqladmin status' output, use one or more instances of this argument,
+# passing the lower and upper range bounds, e.g.:
+#  -s 'Open tables:10:300' -s 'Threads:1:25'
+#  ... would throw a warning if the number of open tables is less than 10 or
+# greater than 300, or if the number of threads is 0 or more than 25
+# See the --tolerance arg for the perecentage over/under the range that will be
+# a WARNING; exceeding by more than that percentage is instead CRITICAL.
+# If you do not specify any stats to monitor in particular, then instead
+# the plugin will simply check that MySQL responded, and return status
+# and perfdata for all stats.
+$np->add_arg(
+    spec => "stat|s=s@",
+    help => "stat name:min:max, e.g. 'Open tables:10:300'",
+);
+
+# define a percentage level outside the defined ranges in the --stat option
+# which will be treated as a WARNING; exceeding that becomes CRITICAL.
+# If not passed, 
+$np->add_arg(
+    spec => "tolerance|t=f",
+    help => "warning threshold in percent; values which exceed a threshold"
+        . " by this amount or less trigger a warning state instead of critical"
+);
+
+# Where to find mysqladmin
+$np->add_arg(
+    spec => "mysqladmin",
+    help => "path to mysqladmin command (defaults to 'mysqladmin')",
+    default => "mysqladmin",
+);
+
+$np->getopts;
+
+my $cmd = $np->opts->mysqladmin . " status";
+my $status = `$cmd`;
+if ($?) {
+    die "Error running $cmd - return status $?";
+}
+
+my %stats = $status =~ /(.+?): (\d+)\s*/g;
+
+
+# If we've got some stats to check individually, then check them,
+# and include perfdata for those only
+my %include_in_perfdata;
+my (@critical, @warning);
+my $tolerance = $np->opts->tolerance / 100;
+for my $statspec (@{ $np->opts->stat || [] }) {
+    my ($stat, $min_thres, $max_thres) = split /:/, $statspec;
+    if (!exists $stats{$stat}) {
+        die "Stat name $stat not found in $cmd output";
+    }
+    $include_in_perfdata{$stat}++;
+    
+    my $value = $stats{$stat};
+    if (($value < $min_thres - ($min_thres * $tolerance))
+        ||
+        ($value > $max_thres + ($max_thres * $tolerance))
+    ) {
+        push @critical, "$stat $value";
+    } elsif ($value < $min_thres || $value > $max_thres) {
+        push @warning, "$stat $value";
+    }
+}
+
+# OK, add perfdata - only the ones we were asked to check, if appropriate,
+# or all otherwise
+for my $stat (keys %stats) {
+    if ($include_in_perfdata{$stat} || !keys %include_in_perfdata) {
+        $np->add_perfdata(
+            label => $stat,
+            value => $stats{$stat}
+        );
+    }
+}
+
+# Finally, throw the appropriate return status - based either on the stats we
+# were asked to check and their thresholds, otherwise just a "yeah, it's alive".
+if ($np->opts->stat) {
+    my @problems = ( @critical, @warning );
+    if (@critical) {
+        $np->nagios_exit(CRITICAL, join ', ', @problems);
+    } elsif (@warning) {
+        $np->nagios_exit(WARNING,  join ', ', @problems);
+    } else {
+        $np->nagios_exit(OK, $status);
+    }
+} else {
+    # OK, nothing specific to check, just "looks alive" - and if we haven't
+    # already bailed long ago, we're happy with the mysqladmin status output, so
+    # it must be.
+    $np->nagios_exit(OK, $status);
+}
+
