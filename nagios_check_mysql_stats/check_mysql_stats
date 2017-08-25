@@ -113,8 +113,10 @@ for my $statspec (@{ $np->opts->stat || [] }) {
 # or all otherwise
 for my $stat (keys %stats) {
     if ($include_in_perfdata{$stat} || !keys %include_in_perfdata) {
+        my $label = $stat;
+        $label =~ s/\s+/_/g;
         $np->add_perfdata(
-            label => $stat,
+            label => $label,
             value => $stats{$stat}
         );
     }
