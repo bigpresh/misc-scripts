@@ -23,6 +23,23 @@ Using nagiosgraph or Graphios to get metrics graphing from Nagios?  This plugin
 will return perfdata, either for all stats if no specific stats were named to
 check, or for the stat(s) named otherwise.
 
+=item Useful C<Queries per second> metric
+
+C<mysqladmin status> gives you a C<Queries per second avg> metric, which would
+at first glance seem useful to you if you want to graph the number of queries
+your database servers are seeing.  It's not, though, as it's the average QPS
+since the server started, not for the last short period, so it won't reflect
+changes in the query load the DB is seeing usefully.
+
+If you use the C<--saved_state> parameter, then the status we get on each run
+will be written to the named file; when we next run, we read the last run's
+stats from the file - then, given we can work out how many new queries we've
+seen since that file was updated, and how many seconds have passed since it was
+updated, we can add a new C<Queries per second> metric which is actually useful.
+
+(That metric can be used for threshold-checking just like any other one, and
+will be returned in perfdata so you can graph it.)
+
 
 =head1 AUTHOR
 

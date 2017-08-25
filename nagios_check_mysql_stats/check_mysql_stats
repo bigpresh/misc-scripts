@@ -35,9 +35,19 @@ $np->add_arg(
 
 # Where to find mysqladmin
 $np->add_arg(
-    spec => "mysqladmin",
+    spec => "mysqladmin|m=s",
     help => "path to mysqladmin command (defaults to 'mysqladmin')",
     default => "mysqladmin",
+);
+
+# A file to record the stats from the last check, to enable comparison of changes.
+# So far, used just to create a new 'Queries per second' metric that's actually
+# useful (representing the period since the last check, rather than since MySQL
+# started - the latter is no use to graph in order to see near-realtime changes
+# in query volume)
+$np->add_arg(
+    spec => "saved_state=s",
+    help => "A file we should record last run stats in",
 );
 
 $np->getopts;
@@ -48,7 +58,32 @@ if ($?) {
     die "Error running $cmd - return status $?";
 }
 
-my %stats = $status =~ /(.+?): (\d+)\s*/g;
+my %stats = parse_status($status);
+
+# If we've got a last run stats file, then read the last run's stats from it:
+if (my $filename = $np->opts->saved_state) {
+    if (!-e $filename) {
+        warn "No such file $filename - we'll try to create it";
+    } else {
+        open my $fh, "<", $filename
+            or die "Failed to open $filename - $!";
+        my $last_status = <$fh>;
+        close $fh;
+        my %last_stats = parse_status($last_status);
+
+        my $queries_since_last = $stats{Questions} - $last_stats{Questions};
+        my $time_since_last = time - (stat($filename))[9];
+        $stats{'Queries per second'} = ($queries_since_last && $time_since_last)
+            ? sprintf '%.2f', $queries_since_last / $time_since_last
+            : 0;
+    }
+
+    # Now, write the status we got this time to it, for next time
+    open my $fh, ">", $filename
+        or die "Failed to open $filename to write status";
+    print $fh $status;
+    close $fh;
+}
 
 
 # If we've got some stats to check individually, then check them,
@@ -103,3 +138,7 @@ if ($np->opts->stat) {
     $np->nagios_exit(OK, $status);
 }
 
+# Given some stats from mysqladmin, parse them
+sub parse_status {
+    return shift =~ /(.+?): (\d+)\s*/g;
+}
