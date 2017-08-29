@@ -1,0 +1,181 @@
+#!/usr/bin/env perl
+
+use strict;
+use List::Util qw(sum);
+use Monitoring::Plugin;
+use Proc::ProcessTable;
+
+my $np = Monitoring::Plugin->new(
+    shortname => 'PROCESSES',
+    usage => '%s -s|--stat',
+);
+
+$np->add_arg(
+    spec => "process_name|p=s",
+    help => "Only processes with this name",
+);
+
+$np->add_arg(
+    spec => "max_ram|m=f",
+    help => "Max RAM threshold (per process-name group) in kB",
+);
+$np->add_arg(
+    spec => "max_cpu|c=f",
+    help => "Max CPU threshold (per process-name group) in %",
+);
+$np->add_arg(
+    spec => "max_procs|p=f",
+    help => "Maximum number of processes (per process-name group)",
+);
+
+$np->add_arg(
+    spec => "tolerance|t=f",
+    help => "warning threshold in percent; values which exceed a threshold"
+        . " by this amount or less trigger a warning state instead of critical"
+);
+
+$np->add_arg(
+    spec    => "include_kernel",
+    help    => "Ignore kernel processes (prgp 0) (default is to exclude them)",
+    default => 0,
+);
+
+
+$np->getopts;
+
+my %cpu_totals;
+my %mem_totals;
+my %count_by_name;
+
+# TODO: for portability, check that we can get the 
+my $pt = Proc::ProcessTable->new( enable_ttys => 0 );
+
+# For portability, ensure we get what we need on this platform.  Only tested on
+# Linux boxes, but *should* work on anything Unix-like at least.
+for my $need_field (qw(pid fname rss pctcpu)) {
+    if (!grep { $_ eq $need_field } $pt->fields) {
+        die "field $need_field isn't returned by Proc::ProcessTable"
+            . " on this platform";
+    }
+}
+
+my $procs = $pt->table;
+my $total_procs;
+for my $process (@$procs) {
+    next if $np->opts->process_name 
+        && $process->fname ne $np->opts->process_name;
+
+    next if $process->pgrp == 0 and !$np->opts->include_kernel;
+
+    # exclude ourselves; since we've obviously only just started up and we're
+    # doing stuff, our CPU time percentage would be surprisingly high.
+    next if $process->pid == $$;
+
+    my $pctcpu = $process->pctcpu;
+    # Not sure why I occasionally see this.
+    # TODO: would like to re-work this for better CPU usage figures anyway -
+    # i.e. CPU time used in last $x seconds or something.
+    $pctcpu = 0 if $pctcpu eq 'inf';
+
+    $cpu_totals{ $process->fname } += $process->pctcpu;
+    $mem_totals{ $process->fname } += $process->rss / 1024;
+    $count_by_name{ $process->fname }++;
+    $total_procs++;
+}
+
+# For each process name group we found, add perfdata
+for my $proc_name (keys %count_by_name) {
+    $np->add_perfdata(
+        label => "$proc_name.procs",
+        value => $count_by_name{$proc_name},
+    );
+    $np->add_perfdata(
+        label => "$proc_name.total_rss",
+        value => $mem_totals{ $proc_name },
+        uom   => "kB",
+    );
+    $np->add_perfdata(
+        label => "$proc_name.total_cpu",
+        value => $cpu_totals{ $proc_name },
+    );
+}
+
+
+# If we're checking thresholds, then see if they're exceeded first:
+for (
+    { 
+        name      => "RAM usage",
+        counts    => \%mem_totals,
+        threshold => $np->opts->max_ram,
+    },
+    {
+        name      => "CPU usage",
+        counts    => \%cpu_totals,
+        threshold => $np->opts->max_cpu,
+    },
+    {
+        name      => "Process count",
+        counts    => \%count_by_name,
+        threshold => $np->opts->max_procs,
+    }
+) {
+    next unless $_->{threshold};
+    my ($state, @exceeders) = _get_state_and_exceeders(
+        $_->{threshold}, $_->{counts},
+    );
+    if ($state) {
+        $np->nagios_exit(
+            $state,
+            "$_->{name} threshold exceeded by: " . join ", ", @exceeders,
+        );
+    }
+}
+
+
+
+# Given a hash to look in and a threshold value, if any exceed the threshold,
+# return the status (WARNING if they're over it but by less than the tolerance
+# option, CRITICAL if they're way over) and a list of process names which caused
+# it.
+sub _get_state_and_exceeders {
+    my ($threshold, $counts) = @_;
+    my $tolerance_multi = $np->opts->tolerance / 100;
+    
+    for (
+        [ CRITICAL => $threshold + ($threshold * $tolerance_multi) ],
+        [ WARNING  => $threshold ],
+    ) {
+        my ($state, $threshold) = @$_;
+        if (my @exceeders = grep { $counts->{$_} > $threshold } keys %$counts) {
+            return ($state, @exceeders);
+        }
+    }
+}
+
+
+
+# OK, we're either not checking thresholds, or nothing exceeded them, so
+# assemble a useful status message and return OK.
+my ($highest_cpu) = sort {
+    $cpu_totals{$b} <=> $cpu_totals{$a}
+} keys %cpu_totals;
+my ($highest_mem) = sort {
+    $mem_totals{$b} <=> $mem_totals{$a}
+} keys %mem_totals;
+my ($most_procs)  = sort {
+    $count_by_name{$b} <=> $count_by_name{$a}
+} keys %count_by_name;
+my $status_msg = "$total_procs procs";
+# The details on "greediest bastards" only really makes sense to add if we're
+# not filtering by name
+if (!$np->opts->process_name) {
+    $status_msg .= ", highest RAM $highest_mem with "
+    . $mem_totals{$highest_mem} . "KB, highest CPU $highest_cpu with "
+    . $cpu_totals{$highest_cpu} . "%, most procs $most_procs with "
+    . $count_by_name{$most_procs} . " processes";
+} else {
+    $status_msg .= " matching " . $np->opts->process_name;
+}
+
+$np->nagios_exit(OK, $status_msg);
+

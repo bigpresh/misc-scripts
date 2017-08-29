@@ -1,0 +1,78 @@
+=head1 NAME
+
+check_process_stats - Nagios plugin for monitoring CPU/memory use by processes
+
+=head1 FEATURES
+
+Allows you to monitor which processes (grouped by name) use the most CPU time /
+memory on your box, with configurable thresholds, perfdata reporting etc.
+
+=over
+
+=item Returns perfdata
+
+Returns perfdata stats of memory and CPU usage and process count grouped by
+process name, so you can feed that to your metrics graphing system via Graphios
+etc and get pretty graphs so you can see at a glance what is using up lots of
+memory or CPU time, as well as monitoring in case any particular type of
+process gets greedier than it should.
+
+=over
+
+=item Monitor only processes with a specific name
+
+By default, looks at all processes, groups them by their process name, returns
+that grouped perfdata for all of them, and checks each group against the
+thresholds (see below).
+
+If you only want to check processes with a specific name, then use the C<-p> /
+C<--process_name> option to only look at processes with the name provided, e.g.:
+
+  [davidp@supernova:~]$ perl check_process_stats -p perl
+  PROCESSES OK - 3 procs matching perl | perl.procs=3;; perl.total_rss=97632kB;;
+  perl.total_cpu=20.5;;
+
+
+=item Check CPU usage / memory usage against thresholds
+
+If you want to check the CPU usage / memory usage/ number of processes against
+thresholds, then you can, using the C<--max_ram|m>, C<--max_cpu|c> and
+C<--max_procs|p> options, and the C<--threshold|t> option to provide a
+percentage leeway above the threshold where the return will be WARNING,
+after which it will be CRITICAL.
+
+=item Returns perfdata
+
+Using nagiosgraph or Graphios to get metrics graphing from Nagios?  This plugin
+will return perfdata, either for all process name groups if no specific name
+was given to filter by, or just the processes whose name matched that group
+otherwise.  Perfdata values returned are:
+
+=over
+
+=item I<procname>.procs
+
+The number of processes with this name
+
+=item I<procname>.total_cpu
+
+The total CPU usage (%) of all processes with this name
+
+=item I<procname>.total_rss
+
+The total memory usage (RSS - Resident Set Size) of all processes with this
+name.
+
+=back
+
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
+
+
+=head1 FEEDBACK
+
+Feedback very much welcomed.  Do feel free to drop me an email and let me know
+if this is useful to you!
+
