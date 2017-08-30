@@ -171,10 +171,13 @@ my ($highest_mem) = sort {
 my ($most_procs)  = sort {
     $count_by_name{$b} <=> $count_by_name{$a}
 } keys %count_by_name;
-my $status_msg = "$total_procs procs";
+my $status_msg = "$total_procs total procs";
 # The details on "greediest bastards" only really makes sense to add if we're
 # not filtering by name
 if (!$np->opts->process_name) {
+    my $group_count = scalar keys %count_by_name;
+    $status_msg .= ", $group_count unique names";
+
     my $highest_mem_value = $mem_totals{$highest_mem} > 8192
         ? sprintf("%.2fMB",$mem_totals{$highest_mem} / 1024)
         : $mem_totals{$highest_mem} . "KB";
