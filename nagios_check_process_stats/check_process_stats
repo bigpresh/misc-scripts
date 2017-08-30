@@ -175,8 +175,12 @@ my $status_msg = "$total_procs procs";
 # The details on "greediest bastards" only really makes sense to add if we're
 # not filtering by name
 if (!$np->opts->process_name) {
+    my $highest_mem_value = $mem_totals{$highest_mem} > 8192
+        ? sprintf("%.2fMB",$mem_totals{$highest_mem} / 1024)
+        : $mem_totals{$highest_mem} . "KB";
+
     $status_msg .= ", highest RAM $highest_mem with "
-    . $mem_totals{$highest_mem} . "KB, highest CPU $highest_cpu with "
+    . $highest_mem_value . ", highest CPU $highest_cpu with "
     . $cpu_totals{$highest_cpu} . "%, most procs $most_procs with "
     . $count_by_name{$most_procs} . " processes";
 } else {
