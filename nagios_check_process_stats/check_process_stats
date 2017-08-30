@@ -62,8 +62,14 @@ for my $need_field (qw(pid fname rss pctcpu)) {
 my $procs = $pt->table;
 my $total_procs;
 for my $process (@$procs) {
+    # Get the process name, trim any trailing whitespace, replace other spaces
+    # with underscores (so Graphios doesn't choke on the perfdata)
+    my $proc_name = $process->fname;
+    $proc_name =~ s/\s+$//;
+    $proc_name =~ s/\s/_/g;
+
     next if $np->opts->process_name 
-        && $process->fname ne $np->opts->process_name;
+        && $proc_name ne $np->opts->process_name;
 
     next if $process->pgrp == 0 and !$np->opts->include_kernel;
 
@@ -77,9 +83,9 @@ for my $process (@$procs) {
     # i.e. CPU time used in last $x seconds or something.
     $pctcpu = 0 if $pctcpu eq 'inf';
 
-    $cpu_totals{ $process->fname } += $process->pctcpu;
-    $mem_totals{ $process->fname } += $process->rss / 1024;
-    $count_by_name{ $process->fname }++;
+    $cpu_totals{ $proc_name } += $process->pctcpu;
+    $mem_totals{ $proc_name } += $process->rss / 1024;
+    $count_by_name{ $proc_name }++;
     $total_procs++;
 }
 
