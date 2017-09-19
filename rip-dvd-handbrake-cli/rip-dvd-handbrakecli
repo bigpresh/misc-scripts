@@ -1,0 +1,157 @@
+#!/usr/bin/env perl
+
+use strict;
+
+my $dvd_drive = '/dev/dvd';
+my $min_duration = 120; # seconds duration
+my $quality = 28; # (Higher is worse!)
+my $preset = 'Normal';
+my $handbrake_bin = "HandBrakeCLI";
+
+# TODO: use Getopt or something, make it usable
+my $series = shift;
+
+# First, get HandBrakeCLI to scan the disc - we can then extract information
+# on titles and chapters
+my $scan_result = `$handbrake_bin -i $dvd_drive -t 0 2>&1`;
+
+if ($?) {
+    die "Error running $handbrake_bin - returncode $?, output:\n$scan_result";
+}
+
+say "scan result: " . $scan_result;
+
+my @titles;
+my $current_title_num;
+my $current_title_data;
+
+# Parse the scan result, working out what titles there are and what chapters
+# they have:
+for my $line (split /\n/, $scan_result) {
+    say "Consider line [$line]";
+
+    if (my($disc_title) = $line =~ /DVD Title: (.+)/) {
+        say "*** Disc title: $disc_title";
+    }
+
+    if (my($title_num) = $line =~ /\+ title (\d+)/) {
+        say "New title $title_num starts";
+
+        if ($current_title_num) {
+            say "Store details of last title $current_title_num";
+            push @titles, $current_title_data;
+        }
+
+        $current_title_num = $title_num;
+        $current_title_data = {
+            num      => $title_num,
+            chapters => [],
+        };
+    }
+    
+    if (!$current_title_num) {
+        # If we're not yet in a title, then skip the rest of the parsing, as it
+        # makes no sense until we've seen a title
+        next;
+    }
+
+    if (my($hour, $min, $sec) 
+        = $line =~ /  \+ duration: (\d{2}):(\d{2}):(\d{2})/) 
+    {
+        my $secs = $sec + ($min * 60) + ($hour * 60 * 60);
+        if ($secs < $min_duration) {
+            warn "Title $current_title_num too short (${secs}s), ignoring";
+            $current_title_data->{ignore}++;
+        }
+        $current_title_data->{duration} = $secs;
+    }
+
+    if (my($chapter_num, $hour, $min, $sec)
+        = $line =~ /\s{4}\+ (\d+): .+ duration (\d{2}):(\d{2}):(\d{2})/)
+    {
+        my $secs = $sec + ($min * 60) + ($hour * 60 * 60);
+        say "Saw chapter $chapter_num, duration $secs";
+        push @{ $current_title_data->{chapters} },
+            { num => $chapter_num, secs => $secs };
+    }
+            
+}
+
+# When we've seen all the output, we may still have a current title we were
+# parsing, so add that one too.
+if ($current_title_num) {
+    say "Store details of final  title $current_title_num";
+    push @titles, $current_title_data;
+}
+
+use Data::Dumper;
+warn "Parsed titles and chapters info: " . Data::Dumper::Dumper(\@titles);
+
+# Now, we've parsed the info we need.  Decide whether this disc uses one title
+# per episode, or one chapter per episode, so we know how to correctly split it
+# up into files sensibly.
+my $episode_num; # don't just use title/chapter number in case we skipped some
+my @viable_titles = grep { ! $_->{ignore} } @titles;
+if (scalar @viable_titles >= 5) {
+    printf "Found %d viable titles, using title-per-episode mode...\n",
+        scalar @viable_titles;
+    sleep 10;
+    for my $title (@viable_titles) {
+        do_rip(
+            mode => 'title',
+            title => $title->{num},
+            episode_num => ++$episode_num,
+        );
+    }
+} else {
+    # Find the title with the most chapters, assume that it's
+    # chapter-per-episode
+    my($main_title) = sort {
+        scalar @{$b->{chapters}} <=> scalar @{$a->{chapters}}
+    } @viable_titles;
+
+    my $chapter_count = scalar @{ $main_title->{chapters} };
+
+    if ($chapter_count < 5) {
+        die sprintf "Not enough titles, assumed chapter-per-episode,"
+            . " but biggest title %d has only %d chapters\n",
+            $main_title->{num},
+            $chapter_count;
+    }
+
+    printf "Title %d has most chapters (%d), "
+        . "assuming chapter-per-episode from it\n",
+        $main_title->{num},
+        scalar @{$main_title->{chapters}};
+    sleep 10;
+
+    for my $chapter (grep { !$_->{ignore} } @{ $main_title->{chapters} }) {
+        do_rip(
+            mode => 'chapter',
+            title => $main_title->{num},
+            chapter => $chapter->{num},
+            episode_num => ++$episode_num,
+        );
+    }
+}
+
+
+sub do_rip {
+    my %args = @_;
+
+    my $filename = sprintf "S%02dE%02d.mp4",
+        $series, $args{episode_num};
+    my $cmd = "HandBrakeCLI --input $dvd_drive --title " . $args{title};
+    if ($args{mode} eq 'chapter') {
+        $cmd .= " --chapters " . $args{chapter};
+    }
+    $cmd .= " --preset $preset -q $quality --output $filename";
+
+    say "Executing $cmd";
+    system($cmd);
+
+}
+
+
+
+

@@ -1,0 +1,23 @@
+=head1 rip-dvd-handbrakecli
+
+My simple command-line DVD ripping script, designed for ripping TV box set
+discs.
+
+Uses HandBrakeCLI to parse the disc to get the list of titles and chapters,
+works out whether it looks like the disc uses one title per episode, or one
+title where each chapter is an episode, and then rips each episode to a separate
+file, numbered e.g. C<S01E01.mp4>.
+
+Needs a lot more polishing, and proper argument parsing via Getopt or similar.
+
+For now, it takes only one argument, the season number:
+
+  ./rip-dvd-handbrakecli 1
+
+Files are written to the current working directory (so cd to the directory you
+want them in then run it; at some point I plan to polish it up so you can give
+it args to specify an output dir, control the quality etc.
+
+=head1 AUTHOR
+
+David Precious C<< <davidp@preshweb.co.uk> >>
