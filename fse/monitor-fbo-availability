@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+
+
+# Watch for FBO availability at the given airports.
+# If the page doesn't contain "no room for FBO construction", there's a gap, so
+# pounce
+
+use strict;
+use List::Util;
+use LWP::UserAgent;
+use Mail::Sendmail;
+use Net::Netrc;
+
+
+my $fse_server = 'server.fseconomy.net';
+my $recipient = 'davidp@preshweb.co.uk';
+
+my $machine = Net::Netrc->lookup($fse_server)
+    or die "No login details for $fse_server in ~/.netrc";
+my ($user, $pass) = $machine->lpa;
+
+my $ua = LWP::UserAgent->new(
+    agent => "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0",
+    cookie_jar => {},
+);
+push @{ $ua->requests_redirectable }, 'POST';
+
+
+sleep 8 + int rand 25;
+
+my $resp = $ua->post("http://$fse_server/userctl",
+    {
+        offset => 1, # TODO: calculate time offset
+        user => $user,
+        password => $pass,
+        event => 'Agree & Log in',
+    },
+);
+
+if (!$resp->is_success) {
+    die "Login request failed - " . $resp->status_line;
+}
+
+
+sleep 2;
+
+for my $icao (List::Util::shuffle(split /,/, $ARGV[0])) {
+
+    print "Looking up $icao\n";
+
+    my $resp = $ua->get("http://$fse_server/airport.jsp?icao=$icao");
+    if (!$resp->is_success) {
+        die "Failed to ask about $icao - " . $resp->status_line;
+    }
+    if ($resp->content !~ /$icao/) {
+        die "Didn't recognise airport page";
+    }
+
+    if ($resp->content =~ /no room for FBO construction/) {
+        print "No room for FBOs at $icao right now\n";
+        # FIXME: should recognise the "Closed" status of an FBO by parsing the
+        # HTML table, in case of false positives on just "Closed"
+        if ($resp->content =~ /(closed FBO|Closed)/) {
+            print "Closed FBO at $icao may go away soon?\n";
+        }
+    } else {
+        print "Ooh - $icao has FBO space";
+        notify($icao);
+    }
+
+    # go easy on the FSE servers, don't be a dick.
+    sleep int rand(10) + 5;
+
+}
+
+
+sub notify {
+    my $icao = shift;
+    Mail::Sendmail::sendmail(
+        To => $recipient,
+        From => $recipient,
+        Subject => "FBO opening at $icao!",
+        message => "Check out $icao, it has space for an FBO!",
+    ) or die "failed to send mail - " . $Mail::Sendmail::error;
+}
+
+
+

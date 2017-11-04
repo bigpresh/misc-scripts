@@ -1,0 +1,106 @@
+#!/usr/bin/env perl
+
+
+# Watch for aircraft newly listed for sale.
+
+use strict;
+use File::Slurper;
+use JSON;
+use List::Util;
+use LWP::UserAgent;
+use Mail::Sendmail;
+use Net::Netrc;
+use Number::Format;
+use XML::Simple;
+
+
+my $fse_server = 'server.fseconomy.net';
+my $recipient = 'davidp@preshweb.co.uk';
+my $last_run_data_filename = '/home/davidp/tmp/fse-planes-for-sale';
+
+# Cheating and using the "account" field to store my read-only API key.
+my $machine = Net::Netrc->lookup($fse_server)
+    or die "No login details for $fse_server in ~/.netrc";
+my ($user, $pass, $key) = $machine->lpa;
+
+my $ua = LWP::UserAgent->new(
+    agent => "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0",
+);
+
+# Just to stand out as a little less regular (although to be fair, the feeds are
+# there to be consumed automatically!)
+sleep int rand 40;
+
+my $url = "data?userkey=1GF81EBBF7&format=xml&query=aircraft&search=forsale";
+my $response = $ua->get("http://$fse_server/$url");
+if (!$response->is_success) {
+    die "Data feed request failed - " . $response->status_line;
+}
+
+# Yes, XML::Simple is ugly and discouraged - but I still use it for simple
+# "here's an XML document, parse it into a data structure for me" stuff.
+my $data = XML::Simple::XMLin($response->content);
+
+
+my @new;
+
+# Read in our list of serial numbers which were on sale last time, so we can
+# skip ones we saw already - then walk the list of planes, and for each one
+# we *didn't* see last time, notify - then save the list of ones we did see
+# this time.
+my $saw_last_time = JSON::from_json(
+    File::Slurper::read_text($last_run_data_filename)
+) or die "Failed to read/parse last run data from $last_run_data_filename";
+my $saw_this_time = {};
+for my $plane (@{$data->{Aircraft}}) {
+    if (!$saw_last_time->{ $plane->{SerialNumber} }) {
+        warn "New plane $plane->{Registration}";
+        $plane->{SalePrice} = '$' . Number::Format::format_number(
+            $plane->{SalePrice} + $plane->{FeeOwed}
+        );
+        push @new, $plane;
+    } else {
+        warn "Meh, saw $plane->{Registration} last time";
+    }
+    $saw_this_time->{ $plane->{SerialNumber} }++;
+}
+
+# Write out the list of ones we saw this time (it'll croak if it fails)
+File::Slurper::write_text(
+    $last_run_data_filename,
+    JSON::to_json($saw_this_time)
+);
+
+# if there were new ones, tell me
+if (@new) {
+    notify(\@new);
+}
+
+
+sub notify {
+    my $planes = shift;
+    my $body = scalar(@$planes) . " new planes found:\n\n"
+        . join("\n\n", map {
+            sprintf "%s - %s for %s at %s (%s)\n"
+                . "  - %s hours (%s to 100hr) URL: %s",
+            @$_{qw(
+            Registration MakeModel SalePrice Location LocationName
+            AirframeTime TimeLast100hr
+            )},
+            url_for_plane($_)
+        } @$planes);
+
+    warn "Sending mail: " . $body;
+    Mail::Sendmail::sendmail(
+        To => $recipient,
+        From => $recipient,
+        Subject => "FSE - " . scalar(@$planes) . " new planes for sale!",
+        message => $body,
+    ) or die "failed to send mail - " . $Mail::Sendmail::error;
+}
+
+
+sub url_for_plane {
+    my $plane = shift;
+    return "http://$fse_server/aircraftlog.jsp?id=" . $plane->{SerialNumber};
+}
