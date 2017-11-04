@@ -43,6 +43,7 @@ my $data = XML::Simple::XMLin($response->content);
 
 
 my @new;
+my %prices_for;
 
 # Read in our list of serial numbers which were on sale last time, so we can
 # skip ones we saw already - then walk the list of planes, and for each one
@@ -53,6 +54,7 @@ my $saw_last_time = JSON::from_json(
 ) or die "Failed to read/parse last run data from $last_run_data_filename";
 my $saw_this_time = {};
 for my $plane (@{$data->{Aircraft}}) {
+    push @{ $prices_for{ $plane->{MakeModel} } }, $plane->{SalePrice};
     if (!$saw_last_time->{ $plane->{SerialNumber} }) {
         warn "New plane $plane->{Registration}";
         $plane->{SalePrice} = '$' . Number::Format::format_number(
@@ -79,12 +81,25 @@ if (@new) {
 
 sub notify {
     my $planes = shift;
+
+    # for each plane we're reporting on, calculate the average value of that
+    # model on sale for comparison
+    for my $plane (@$planes) {
+        my @prices = @{ $prices_for{ $plane->{MakeModel} } };
+        $plane->{avg_price} = '$' . Number::Format::format_number(
+            int(List::Util::sum(@prices) / @prices)
+        );
+        $plane->{others_count} = scalar @prices;
+    }
+
     my $body = scalar(@$planes) . " new planes found:\n\n"
         . join("\n\n", map {
             sprintf "%s - %s for %s at %s (%s)\n"
+                . "(%s others for sale at average %s)\n"
                 . "  - %s hours (%s to 100hr) URL: %s",
             @$_{qw(
             Registration MakeModel SalePrice Location LocationName
+            others_count avg_price
             AirframeTime TimeLast100hr
             )},
             url_for_plane($_)
