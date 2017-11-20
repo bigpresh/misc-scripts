@@ -7,6 +7,7 @@ use strict;
 use File::Slurper;
 use JSON;
 use List::Util;
+use List::MoreUtils;
 use LWP::UserAgent;
 use Mail::Sendmail;
 use Net::Netrc;
@@ -92,6 +93,7 @@ sub notify {
         $plane->{others_count} = scalar @prices;
     }
 
+    my $list_first = qr/B-25|172/;
     my $body = scalar(@$planes) . " new planes found:\n\n"
         . join("\n\n", map {
             sprintf "%s - %s for %s at %s (%s)\n"
@@ -103,7 +105,11 @@ sub notify {
             AirframeTime TimeLast100hr
             )},
             url_for_plane($_)
-        } @$planes);
+        } map { @$_ } List::MoreUtils::part(
+            sub { $_->{MakeModel} =~ $list_first ? 0 : 1 },
+            sort { cmp_price($a->{SalePrice}, $b->{SalePrice}) } @$planes
+        )
+        );
 
     warn "Sending mail: " . $body;
     Mail::Sendmail::sendmail(
@@ -118,4 +124,9 @@ sub notify {
 sub url_for_plane {
     my $plane = shift;
     return "http://$fse_server/aircraftlog.jsp?id=" . $plane->{SerialNumber};
+}
+
+sub cmp_price {
+    my ($a, $b) = map { s/[^0-9.]//gr } @_;
+    return $a <=> $b;
 }
