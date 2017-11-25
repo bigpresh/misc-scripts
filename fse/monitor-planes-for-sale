@@ -32,7 +32,7 @@ my $ua = LWP::UserAgent->new(
 # there to be consumed automatically!)
 sleep int rand 40;
 
-my $url = "data?userkey=1GF81EBBF7&format=xml&query=aircraft&search=forsale";
+my $url = "data?userkey=$key&format=xml&query=aircraft&search=forsale";
 my $response = $ua->get("http://$fse_server/$url");
 if (!$response->is_success) {
     die "Data feed request failed - " . $response->status_line;
