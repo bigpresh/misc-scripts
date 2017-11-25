@@ -93,7 +93,7 @@ sub notify {
         $plane->{others_count} = scalar @prices;
     }
 
-    my $list_first = qr/B-25|172/;
+    my $list_first = qr/B-25|172|Seneca/;
     my $body = scalar(@$planes) . " new planes found:\n\n"
         . join("\n\n", map {
             sprintf "%s - %s for %s at %s (%s)\n"
