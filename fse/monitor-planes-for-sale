@@ -16,8 +16,21 @@ use XML::Simple;
 
 
 my $fse_server = 'server.fseconomy.net';
-my $recipient = 'davidp@preshweb.co.uk';
 my $last_run_data_filename = '/home/davidp/tmp/fse-planes-for-sale';
+
+
+# The list of people who want notifications, and what notifications they want
+# (e.g. regexes to match against planes, locations, or both) is now in a
+# config file, so we can act differently for different people
+my $recipient_spec_file = '/home/davidp/fse-planes-for-sale-recipients';
+my $recipients_spec = do $recipient_spec_file
+    or die "Failed to read recipients specs from $recipient_spec_file - $!";
+
+if (ref $recipients_spec ne 'HASH') {
+    die "Recipient specs should be a hashref keyed on email addresses";
+}
+
+
 
 # Cheating and using the "account" field to store my read-only API key.
 my $machine = Net::Netrc->lookup($fse_server)
@@ -74,14 +87,14 @@ File::Slurper::write_text(
     JSON::to_json($saw_this_time)
 );
 
-# if there were new ones, tell me
+# if there were new ones, then notify recipients who are interested in them.
 if (@new) {
-    notify(\@new);
+    notify(\@new, $recipients_spec);
 }
 
 
 sub notify {
-    my $planes = shift;
+    my ($planes, $recipients_spec) = @_;
 
     # for each plane we're reporting on, calculate the average value of that
     # model on sale for comparison
@@ -93,33 +106,82 @@ sub notify {
         $plane->{others_count} = scalar @prices;
     }
 
-    my $list_first = qr/B-25|172|Seneca/;
-    my $body = scalar(@$planes) . " new planes found:\n\n"
-        . join("\n\n", map {
-            sprintf "%s - %s for %s at %s (%s)\n"
-                . "(%s others for sale at average %s)\n"
-                . "  - %s hours (%s to 100hr) URL: %s",
-            @$_{qw(
-            Registration MakeModel SalePrice Location LocationName
-            others_count avg_price
-            AirframeTime TimeLast100hr
-            )},
-            url_for_plane($_)
-        } map { @$_ } List::MoreUtils::part(
-            sub { $_->{MakeModel} =~ $list_first ? 0 : 1 },
-            sort { cmp_price($a->{SalePrice}, $b->{SalePrice}) } @$planes
-        )
-        );
+    # For each recipient, see if they'd be interested in this plane, and if so,
+    # add it to the notification we'll send them (if it's non-empty at the end!)
+    my %planes_by_recipient;
+    for my $recipient (keys %$recipients_spec) {
+        for my $spec (@{ $recipients_spec->{$recipient} }) {
+            for my $plane (@$planes) {
+                if (
+                    (!$spec->{model} || $plane->{MakeModel} =~ $spec->{model})
+                    &&
+                    (!$spec->{location} || $plane->{Location} =~ $spec->{location})
+                ) {
+                    push @{ $planes_by_recipient{$recipient} }, $plane;
+                }
+            }
+        }
+    }
 
-    warn "Sending mail: " . $body;
-    Mail::Sendmail::sendmail(
-        To => $recipient,
-        From => $recipient,
-        Subject => "FSE - " . scalar(@$planes) . " new planes for sale!",
-        message => $body,
-    ) or die "failed to send mail - " . $Mail::Sendmail::error;
+    # Now, for each recipient who  we found any planes they'd be interested
+    # in, drop them an email
+    for my $recipient (keys %planes_by_recipient) {
+        my @planes = @{ $planes_by_recipient{$recipient} };
+        my $count = scalar @planes;
+        my $body = <<PREAMBLE;
+Hi!
+
+$count newly-listed planes on FSE were found which match your current
+filter settings.  (If you'd like your filter settings updated, please
+nudge bigpresh.)
+
+The planes found, listed from least-to-most expensive, follow.
+
+PREAMBLE
+
+        $body .= join "\n\n", map {
+            display_plane($_) 
+        } sort {
+            cmp_price($a->{SalePrice}, $b->{SalePrice})
+        } @planes;
+
+        $body .= <<POSTAMBLE;
+
+
+If you would like to change your filter settings to only see planes
+which are likely to be of interest to you (based on model / location)
+then nudge me (bigpresh), and I'll update your settings.
+
+Cheers,
+
+Dave P (bigpresh)
+
+POSTAMBLE
+
+        warn "Sending mail: " . $body;
+        Mail::Sendmail::sendmail(
+            To => $recipient,
+            From => 'davidp@preshweb.co.uk',
+            Subject => "FSE - $count new planes for sale!",
+            message => $body,
+        ) or die "failed to send mail - " . $Mail::Sendmail::error;
+
+        }
 }
 
+sub display_plane {
+    my $plane = shift;
+
+    return sprintf "%s - %s for %s at %s (%s)\n"
+        . "(%s others for sale at average %s)\n"
+        . "  - %s hours (%s to 100hr) URL: %s",
+        @$plane{qw(
+        Registration MakeModel SalePrice Location LocationName
+        others_count avg_price
+        AirframeTime TimeLast100hr
+        )},
+        url_for_plane($plane);
+}
 
 sub url_for_plane {
     my $plane = shift;
