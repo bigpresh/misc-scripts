@@ -116,6 +116,9 @@ sub notify {
                     (!$spec->{model} || $plane->{MakeModel} =~ $spec->{model})
                     &&
                     (!$spec->{location} || $plane->{Location} =~ $spec->{location})
+                    &&
+                    (!$spec->{max_price} 
+                        || cmp_price($plane->{Price}, $spec->{max_price}) == -1)
                 ) {
                     push @{ $planes_by_recipient{$recipient} }, $plane;
                 }
