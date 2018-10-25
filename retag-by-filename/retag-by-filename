@@ -45,6 +45,9 @@ for my $file (@files) {
         for my $tag(qw(track title artist comment)) {
             if (!$opt->get_set_only || grep { $_ eq $tag } $opt->get_set_only) {
                 my $tag_val = $+{$tag} || '';
+                if ($tag eq 'track') {
+                    $tag_val = sprintf '%02d', $tag_val;
+                }
                 say "Setting $tag to '$tag_val'" if $opt->get_verbose;
                 $tags->$tag($tag_val);
             }
