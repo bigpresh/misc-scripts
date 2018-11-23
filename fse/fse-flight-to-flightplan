@@ -1,0 +1,74 @@
+#!/usr/bin/env perl
+
+use strict;
+use LWP::UserAgent;
+use Net::Netrc;
+use XML::Twig;
+
+# Enter your API key - get it from http://server.fseconomy.net/datafeeds.jsp
+# Or, leave empty, and we'll read it from .netrc using Net::Netrc - see below.
+my $api_key = "";
+# Enter the filename to write the flight plan to:
+my $filename = "/mnt/data/SteamLibrary/steamapps/common/X-Plane 10/Output/FMS plans/FSE.fms";
+
+
+# First - if we don't have an API key provided, then look in .netrc
+# You should define an entry for server.fseconomy.net with the "account" 
+# set to the API key, e.g.:
+#     machine server.fseconomy.net
+#     account XXXXXXX
+if (!$api_key) {
+    my $mach = Net::Netrc->lookup('server.fseconomy.net');
+    if (!$mach) {
+        die "No API key in script and none found in .netrc!";
+    }
+    $api_key = $mach->account;
+}
+
+
+my $url = "http://server.fseconomy.net/data?userkey=$api_key&format=xml&query=assignments&search=key&readaccesskey=$api_key";
+my $ua = LWP::UserAgent->new;
+my $response = $ua->get($url);
+
+if (!$response->is_success) {
+    die "Request failed - " . $response->status_line;
+}
+
+my $twig = XML::Twig->new;
+$twig->parse($response->decoded_content);
+my $root = $twig->root;
+my %destinations;
+for my $assignment ($root->children) {
+    my $destination = $assignment->first_child_text('Destination');
+    my $status = $assignment->first_child_text('Status');
+    if ($status =~ /Departing|Enroute/) {
+        $destinations{$destination}++;
+    }
+}
+
+
+# For now, dead simple - just dump each ICAO code to a flight plan in no
+# particular order, I can just pick the one I want and hit direct-to, still
+# avoids having to scroll through entering letter-by-letter.
+# Except for complex flights with multiple stops enroute, it'll be fine
+# anyway.
+# TODO: find a good way to fetch the distance for each assignment, as it's
+# unhelpfully not present in the data feed - then we could sort by distance,
+# shortest hop first.
+open my $fh, ">", $filename
+    or die "Failed to open $filename - $!";
+
+print {$fh} <<PREAMBLE;
+I
+3 version
+0
+4
+PREAMBLE
+
+for my $icao (sort keys %destinations) {
+    say "Adding $icao to flight plan";
+    say {$fh} "1 $icao 0";
+}
+
+
+
