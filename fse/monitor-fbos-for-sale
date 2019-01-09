@@ -1,0 +1,181 @@
+#!/usr/bin/env perl
+
+
+# Watch for FBOs newly listed for sale.
+
+use strict;
+use File::Slurper;
+use JSON;
+use List::Util;
+use List::MoreUtils;
+use LWP::UserAgent;
+use Mail::Sendmail;
+use Net::Netrc;
+use Number::Format;
+use XML::Simple;
+
+
+my $fse_server = 'server.fseconomy.net';
+my $last_run_data_filename = '/home/davidp/tmp/fse-fbos-for-sale';
+
+
+# The list of people who want notifications, and what notifications they want
+# (e.g. regexes to match against fbos, locations, or both) is now in a
+# config file, so we can act differently for different people
+my $recipient_spec_file = '/home/davidp/fse-fbos-for-sale-recipients';
+my $recipients_spec = do $recipient_spec_file
+    or die "Failed to read recipients specs from $recipient_spec_file - $!";
+
+if (ref $recipients_spec ne 'HASH') {
+    die "Recipient specs should be a hashref keyed on email addresses";
+}
+
+
+
+# Cheating and using the "account" field to store my read-only API key.
+my $machine = Net::Netrc->lookup($fse_server)
+    or die "No login details for $fse_server in ~/.netrc";
+my ($user, $pass, $key) = $machine->lpa;
+
+my $ua = LWP::UserAgent->new(
+    agent => "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0",
+);
+
+# Just to stand out as a little less regular (although to be fair, the feeds are
+# there to be consumed automatically!)
+#sleep int rand 40;
+my $url = "data?userkey=$key&format=xml&query=fbos&search=forsale";
+my $response = $ua->get("http://$fse_server/$url");
+if (!$response->is_success) {
+    die "Data feed request failed - " . $response->status_line;
+}
+
+# Yes, XML::Simple is ugly and discouraged - but I still use it for simple
+# "here's an XML document, parse it into a data structure for me" stuff.
+my $data = XML::Simple::XMLin($response->content);
+
+
+my @new;
+my %prices_for;
+
+# Read in our list of serial numbers which were on sale last time, so we can
+# skip ones we saw already - then walk the list of fbos, and for each one
+# we *didn't* see last time, notify - then save the list of ones we did see
+# this time.
+my $saw_last_time = JSON::from_json(
+    File::Slurper::read_text($last_run_data_filename)
+) or die "Failed to read/parse last run data from $last_run_data_filename";
+my $saw_this_time = {};
+for my $fbo (@{$data->{FBO}}) {
+    if (!$saw_last_time->{ $fbo->{Icao} }) {
+        warn "New FBO ICAO $fbo->{Icao}";
+        $fbo->{SellPrice} = '$' . Number::Format::format_number(
+            $fbo->{SellPrice},
+        );
+        push @new, $fbo;
+    } else {
+        warn "Meh, saw $fbo->{Icao} last time";
+    }
+    $saw_this_time->{ $fbo->{Icao} }++;
+}
+
+# Write out the list of ones we saw this time (it'll croak if it fails)
+File::Slurper::write_text(
+    $last_run_data_filename,
+    JSON::to_json($saw_this_time)
+);
+
+# if there were new ones, then notify recipients who are interested in them.
+if (@new) {
+    notify(\@new, $recipients_spec);
+}
+
+
+sub notify {
+    my ($fbos, $recipients_spec) = @_;
+
+    # For each recipient, see if they'd be interested in this FBO, and if so,
+    # add it to the notification we'll send them (if it's non-empty at the end!)
+    my %fbos_by_recipient;
+    for my $recipient (keys %$recipients_spec) {
+        for my $spec (@{ $recipients_spec->{$recipient} }) {
+            for my $fbo (@$fbos) {
+                if (
+                    (!$spec->{icao} || $fbo->{Icao} =~ $spec->{icao})
+                    &&
+                    (!$spec->{max_price} 
+                        || cmp_price($fbo->{SellPrice}, $spec->{max_price}) == -1)
+                    &&
+                    (!$spec->{min_lots} || $fbo->{Lots} >= $spec->{min_lots})
+                ) {
+                    push @{ $fbos_by_recipient{$recipient} }, $fbo;
+                }
+            }
+        }
+    }
+
+    # Now, for each recipient who  we found any fbos they'd be interested
+    # in, drop them an email
+    for my $recipient (keys %fbos_by_recipient) {
+        my @fbos = @{ $fbos_by_recipient{$recipient} };
+        my $count = scalar @fbos;
+        my $body = <<PREAMBLE;
+Hi!
+
+$count newly-listed FBOs on FSE were found which match your current
+filter settings.  (If you'd like your filter settings updated, please
+nudge bigpresh.)
+
+The fbos found, listed from least-to-most expensive, follow.
+
+PREAMBLE
+
+        $body .= join "\n\n", map {
+            display_fbo($_) 
+        } sort {
+            cmp_price($a->{SalePrice}, $b->{SalePrice})
+        } @fbos;
+
+        $body .= <<POSTAMBLE;
+
+
+If you would like to change your filter settings to only see FBOs
+which are likely to be of interest to you (based on location/price)
+then nudge me (bigpresh), and I'll update your settings.
+
+Cheers,
+
+Dave P (bigpresh)
+
+POSTAMBLE
+
+        warn "Sending mail: " . $body;
+        Mail::Sendmail::sendmail(
+            To => $recipient,
+            From => 'davidp@preshweb.co.uk',
+            Subject => "FSE - $count new FBOs for sale!",
+            message => $body,
+        ) or die "failed to send mail - " . $Mail::Sendmail::error;
+
+        }
+}
+
+sub display_fbo {
+    my $fbo = shift;
+
+    return sprintf "%s - %s, %d lots, %s - %s",
+        @$fbo{qw(
+            Icao SellPrice Lots Location
+        )},
+        url_for_fbo($fbo);
+}
+
+sub url_for_fbo {
+    my $fbo = shift;
+    return "http://$fse_server/airport.jsp?icao=" . $fbo->{Icao};
+}
+
+sub cmp_price {
+    my ($a, $b) = map { s/[^0-9.]//gr } @_;
+    return $a <=> $b;
+}
