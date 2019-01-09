@@ -117,6 +117,8 @@ sub notify {
                     &&
                     (!$spec->{location} || $plane->{Location} =~ $spec->{location})
                     &&
+                    (!$spec->{id} || $plane->{SerialNumber} eq $spec->{id})
+                    &&
                     (!$spec->{max_price} 
                         || cmp_price($plane->{Price}, $spec->{max_price}) == -1)
                 ) {
