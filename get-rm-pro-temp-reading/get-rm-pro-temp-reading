@@ -46,6 +46,7 @@ for (1..3) {
     # returns 249C, and I'm sure my lounge wasn't *that* warm :)
     if ($data->{temperature} > 60 || $data->{temperature} < -20) {
         warn "Discarding implausible reading $data->{temperature}";
+        sleep 2;
         redo;
     }
 
