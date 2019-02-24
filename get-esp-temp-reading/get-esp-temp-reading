@@ -62,6 +62,10 @@ for (1..5) {
 my $avg_temp = List::Util::sum(@temperatures) / scalar @temperatures;
 my $avg_hum  = List::Util::sum(@humidities)   / scalar @humidities;
 
+if ($avg_hum > 100) {
+    die "Silly humidity reading $avg_hum, bailing out";
+}
+
 my $dbh = DBI->connect(
     "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf"
 ) or die "Failed to connect to DB! $DBI::errstr";
