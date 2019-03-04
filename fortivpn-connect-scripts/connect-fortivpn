@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+
+use strict;
+use Expect;
+
+# The script and lib path to call over SSH to get password
+my $host = 'supernova-vm.preshweb.co.uk';
+my $remote_script = './get-thg-vpn-password';
+my $lib_dir = '/home/davidp/perl5/lib/perl5';
+my $vpn_server = "...";
+
+my $user_pass = `ssh $host 'perl -I$lib_dir $remote_script'`;
+
+if (!$user_pass) {
+    die "Failed to fetch password over SSH from $host";
+}
+
+my ($user, $pass) = split ':', $user_pass, 2;
+
+say "OK, connect to VPN as $user with $pass";
+
+my $vpn_command = "/opt/forticlient-sslvpn/64bit/forticlientsslvpn_cli";
+my $expect = Expect->new;
+$expect->debug(2);
+$expect->raw_pty(1);
+say "Spawning $vpn_command via sudo";
+$expect->spawn(
+    "/usr/bin/sudo",
+    $vpn_command,
+    "--vpnuser" =>  $user,
+    "--server"  => $vpn_server,
+) or die "Failed to spawn $vpn_command - $!";
+
+
+$expect->expect(10, "Password for VPN:");
+say "Sending password";
+$expect->send($pass . "\n");
+
+
+# Hopefully we'll get connected now...
+$expect->expect(20, "STATUS::Tunnel running");
+say "Tunnel is running, now wait until client closes";
+# Now, let it run (wait until the process sends an EOF itself)
+$expect->expect(undef);
+
+
+# Do I need to do something here to say "alright, now just wait"?
+#
+say "VPN comand exit status: " . $expect->exitstatus();
+
+
