@@ -107,6 +107,8 @@ sub notify {
                         || cmp_price($fbo->{SellPrice}, $spec->{max_price}) == -1)
                     &&
                     (!$spec->{min_lots} || $fbo->{Lots} >= $spec->{min_lots})
+                    &&
+                    (!$spec->{location} || $fbo->{Location} =~ $spec->{location})
                 ) {
                     push @{ $fbos_by_recipient{$recipient} }, $fbo;
                 }
