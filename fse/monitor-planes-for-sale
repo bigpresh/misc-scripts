@@ -120,7 +120,7 @@ sub notify {
                     (!$spec->{id} || $plane->{SerialNumber} eq $spec->{id})
                     &&
                     (!$spec->{max_price} 
-                        || cmp_price($plane->{Price}, $spec->{max_price}) == -1)
+                        || cmp_price($plane->{SalePrice}, $spec->{max_price}) == -1)
                 ) {
                     push @{ $planes_by_recipient{$recipient} }, $plane;
                 }
