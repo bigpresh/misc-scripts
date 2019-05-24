@@ -1,5 +1,12 @@
 #!/usr/bin/env perl
 
+# check_process_stats, Nagios plugin to monitor running processes in detail
+# (c) David Precious <davidp@preshweb.co.uk> 2017-2019
+# 
+# This work is free. You can redistribute it and/or modify it under the
+# terms of the Do What The Fuck You Want To Public License, Version 2,
+# as published by Sam Hocevar. See http://www.wtfpl.net/ for more details. 
+#
 use strict;
 use List::Util qw(sum);
 use Monitoring::Plugin;
@@ -47,7 +54,6 @@ my %cpu_totals;
 my %mem_totals;
 my %count_by_name;
 
-# TODO: for portability, check that we can get the 
 my $pt = Proc::ProcessTable->new( enable_ttys => 0 );
 
 # For portability, ensure we get what we need on this platform.  Only tested on
