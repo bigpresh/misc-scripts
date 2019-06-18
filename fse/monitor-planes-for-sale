@@ -167,7 +167,7 @@ POSTAMBLE
         # If there's only one matching plane, include the details in the subject
         if (scalar @planes == 1) {
             my $plane = $planes[0];
-            $subject .= sprintf "%s %s for %s at %s (%s)",
+            $subject .= sprintf " - %s %s for %s at %s (%s)",
                 @$plane{
                 qw(MakeModel Registration SalePrice Location LocationName)
                 };
