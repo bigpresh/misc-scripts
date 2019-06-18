@@ -178,7 +178,7 @@ POSTAMBLE
         Mail::Sendmail::sendmail(
             To => $recipient,
             From => 'davidp@preshweb.co.uk',
-            Subject => "FSE - $count new planes for sale!",
+            Subject => $subject,
             message => $body,
         ) or die "failed to send mail - " . $Mail::Sendmail::error;
 
