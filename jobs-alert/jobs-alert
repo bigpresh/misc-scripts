@@ -1,0 +1,76 @@
+#!/usr/bin/env perl
+
+use strict;
+use HTML::TableExtract;
+use Mail::Sendmail;
+use Net::Netrc;
+use WWW::Mechanize;
+
+my $machine = Net::Netrc->lookup('jobs.perl.org')
+    or die "No entry for jobs.perl.org in .netrc";
+my ($login, $password) = $machine->lpa;
+
+
+my $mech = WWW::Mechanize->new;
+$mech->get('https://jobs.perl.org/login?redir=%2Findex');
+
+$mech->submit_form(
+    with_fields => {
+        login    => $login,
+        password => $password,
+    },
+    button => 'Submit',
+);
+
+if ($mech->content !~ /Logout/) {
+    die "Looks like the login failed\n" . $mech->content;
+}
+
+$mech->follow_link(text => 'Admin');
+
+if ($mech->content =~ /No jobs needing review/) {
+    exit;
+}
+
+# OK, parse out the jobs listed and send an email to nag me to review them.
+my @cols = ('Id', 'Title', 'Date posted', 'Status');
+my $te = HTML::TableExtract->new(
+    headers => \@cols,
+);
+
+$te->parse($mech->content)
+    or die "Failed to parse out HTML table";
+
+
+my @jobs;
+for my $row ($te->rows) {
+    my %job;
+    for (@$row) {
+        s{^\s+}{};
+        s{\s+$}{};
+    }
+    @job{@cols} = @$row;
+    say "Job $job{Id} - $job{Title}";
+    push @jobs, \%job;
+}
+
+if (@jobs) {
+    my $msg = "There are new jobs to review on jobs.perl.org\n\n";
+
+    for my $job (@jobs) {
+        $msg .= sprintf "%s (posted %s)\n\thttps://jobs.perl.org/preview/%d\n\n",
+            @$job{'Title', 'Date posted', 'Id'};
+    }
+
+    $msg .= "\n\n\nSee them all at https://jobs.perl.org/admin/\n";
+
+    Mail::Sendmail::sendmail(
+        To => 'davidp@preshweb.co.uk',
+        From => 'davidp@preshweb.co.uk',
+        Subject => scalar(@jobs) . " jobs to approve on jobs.perl.org",
+        message => $msg,
+    ) or die "Failed to send notification email";
+}
+
+
+
