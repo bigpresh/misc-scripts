@@ -1,0 +1,45 @@
+#!/usr/bin/env perl
+
+# Quick, dirty script to monitor for a Sainsburys product becoming available in
+# the desired size.
+# It should be made much more generic, controllable via command line options
+# etc.
+# For now, though, I just want to watch for the school polo shirts we got Abbie
+# coming available in the tiny size we need for her and struggled to get many
+# of, so this'll do!
+#
+use strict;
+
+use Mail::Sendmail;
+use WWW::Mechanize;
+
+my $mech = WWW::Mechanize->new;
+
+$mech->get(
+'https://tuclothing.sainsburys.co.uk/p/White-Embroidered-Pocket-Polo-Shirts-3-Pack-(3-12-years)/128118016-White'
+) or die "Failed to fetch page";
+
+#my $form = $mech->form_with_fields('productVariantSize')
+my $form = $mech->form_number(2)
+    or die "failed to find form";
+
+my $size_input = $form->find_input('#productVariantSize')
+    or die "No size input found in form $form";
+
+my %year_state;
+for my $label ($size_input->value_names) {
+    my ($year, $status) = $label =~ /^(\d+) years\s*(.+)?/;
+    $year_state{$year} = $status || 'In stock';
+}
+
+my $want_year = 2;
+if ($year_state{$want_year} ne 'Out of Stock') {
+    Mail::Sendmail::sendmail(
+        To      => 'davidp@preshweb.co.uk',
+        From    => 'supernova@preshweb.co.uk',
+        Subject => 'Abbie polo shirts back in stock at Sainsburys',
+        message => "QUICK - go order Abbie more polos\n\n"
+            . "Status on Sainsburys site: " . $year_state{$want_year},
+    ) and say "Email sent!";
+}
+
