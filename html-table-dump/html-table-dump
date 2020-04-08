@@ -1,0 +1,58 @@
+#!/usr/bin/env perl
+
+# Quick script to fetch a page and dump details of all HTML tables which
+# HTML::TableExtract finds.  Useful as a starting-point for table scraping.
+#
+# If given an URL as the first param, fetches it, otherwise reads HTML from
+# STDIN.
+#
+# Outputs JSON containing details of each table and its rows and columns
+
+use strict;
+use LWP::UserAgent;
+use HTML::TableExtract;
+use JSON;
+
+my $html;
+my %output;
+my $url = shift;
+if ($url) {
+    my $response = LWP::UserAgent->new->get($url);
+
+    if (!$response->is_success) {
+        die "Failed to fetch $url - " . $response->status_line . "\n";
+    }
+    $html = $response->decoded_content;
+    $output{source} = $url;
+} else {
+    $html = join "", <STDIN>;
+    $output{source} = 'STDIN';
+}
+
+use HTML::TableExtract;
+my $te = HTML::TableExtract->new( );
+$te->parse($html);
+
+# Examine all matching tables
+my $tablenum=0;
+foreach my $ts ($te->tables) {
+    my $table = {
+        num => $tablenum++,
+        coords => {
+            depth => $ts->depth,
+            count => $ts->count,
+        },
+    };
+    my $rownum=0;
+    foreach my $row ($ts->rows) {
+        # Strip leading/trailing whitespace from each value
+        my @values = map { s/^\s+//; s/\s+$//; $_ } @$row;
+        push @{ $table->{rows} }, \@values;
+        $rownum++;
+    }
+    $table->{total_rows} = $rownum;
+    push @{$output{tables}}, $table;
+}
+
+print JSON::to_json(\%output);
+
