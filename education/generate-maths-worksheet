@@ -1,0 +1,37 @@
+#!/usr/bin/env perl
+
+# Generate a maths worksheet with random sums.
+
+use strict;
+use Template;
+
+# TODO: support command-line option to pick only a given operator, or limit
+# the set (e.g. add or minus only, no multiplication/division until old enough)
+my @operators = ('+', '-');
+
+# TODO: support command-line option to set max operand value for difficulty
+my $max = 10;
+
+# TODO: support command-line option to point us at a template to use
+my $template_file = 'sums.tmpl';
+
+# Subtractions where the answer is negative are probably best avoided for now
+my $avoid_negative = 1;
+
+my @sums;
+
+for (1..20) {
+    my ($op1, $op2) = map { int(rand($max)) } (0..1);
+    my $op = $operators[int(rand(@operators))];
+    redo if ($avoid_negative and $op eq '-' and $op1 - $op2 < 0);
+
+    push @sums, {
+        operand1 => $op1,
+        operand2 => $op2,
+        operator => $op,
+    };
+}
+
+my $tt = Template->new;
+$tt->process($template_file, { sums => \@sums });
+

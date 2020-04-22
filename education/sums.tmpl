@@ -1,0 +1,42 @@
+<html>
+<head>
+<title>Randomly-generated maths worksheet</title>
+
+<style>
+BODY {
+    font-family: Verdana, Arial, sans-serif;
+    size: 16px;
+}
+
+.sum {
+    padding: 10px 50px 50px 10px;
+    margin: 10px;
+    border: 1px solid blue;
+    width: 150px;
+    float: left;
+    text-align: right;
+    font-size: 24px;
+    font-weight: bold;
+}
+.operator {
+    font-size: 28px;
+}
+.sum HR {
+    width: 50%;
+    float: right;
+}
+</style>
+</head>
+<body>
+
+[% FOREACH sum IN sums %]
+<div class="sum">
+<span class="operand">[% sum.operand1 %]</span><br />
+<span class="operator">[% sum.operator %]</span><br />
+<span class="operand">[% sum.operand2 %]</span><br />
+<hr>
+</div>
+[% END %]
+
+</body>
+</html>
