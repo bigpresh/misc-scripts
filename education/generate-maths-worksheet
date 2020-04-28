@@ -20,10 +20,12 @@ my $avoid_negative = 1;
 
 my @sums;
 
+my %had_sum;
 for (1..20) {
     my ($op1, $op2) = map { int(rand($max)) } (0..1);
     my $op = $operators[int(rand(@operators))];
     redo if ($avoid_negative and $op eq '-' and $op1 - $op2 < 0);
+    redo if ($had_sum{join '', $op1, $op, $op2}++);
 
     push @sums, {
         operand1 => $op1,
