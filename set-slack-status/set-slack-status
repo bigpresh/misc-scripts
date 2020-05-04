@@ -1,0 +1,52 @@
+#!/usr/bin/env perl
+
+use strict;
+use LWP::UserAgent::JSON;
+use Net::Netrc;
+
+# Lookup credentials from .netrc; set the token as the 'account', not
+# 'password' (in case you also store your account password).
+# Token needs to have users.profile:write privs.
+my $mach = Net::Netrc->lookup('slack.com')
+    or die "Set up a .netrc entry with your token as the account";
+my ($user, undef, $token) = $mach->lpa;
+
+my $ua = LWP::UserAgent::JSON->new;
+my %status_set;
+if ($ARGV[0] =~ /^:.+:/) {
+    $status_set{status_emoji} = shift @ARGV;
+}
+$status_set{status_text}  = join " ", @ARGV;
+
+# If we're setting the status to empty to clear it, we must do the same with
+# the status emoji (this doesn't appear to be documented, I got the totally
+# undocumented error profile_status_clear_failed_text_but_no_emoji and had
+# to guess at the fix)
+if ($status_set{status_text} eq '') {
+    $status_set{status_emoji} = '';
+}
+
+# TODO: maybe add a command-line option to set this.  When I use this script,
+# it'll typically be as a cron job to set my status at night / in the morning,
+# so I won't need it - just clear it in case I'd previously set an auto-expire
+# status via the Slack client
+$status_set{status_expiration} = '';
+
+my $res = $ua->post_json(
+    "https://slack.com/api/users.profile.set",
+    {
+        token => $token,
+        profile => \%status_set,
+    },
+    Authorization => "Bearer $token",
+);
+if ($res->is_success) {
+    if (my $error = $res->json_content->{error}) {
+        die "Failed: $error\n";
+    } else {
+        say "OK, updated status";
+    }
+} else {
+    die "Failed to set status - " . $res->status_line . "\n";
+}
+
