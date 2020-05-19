@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Script to correct datetime on my Pyrus hi3518-based IP camera.
+#
+# Its web interface is dire and doesn't even work for me, so I can't set
+# the date & time via it.
+# However, it exposes telnet with a factory username & password(!), so
+# I can just telnet in and set the datetime correctly periodically.
+#
+# Yes, this is the kind of device that gets put on its own subnet where it
+# cannot talk outbound at all, because I do not trust it.
+
+curdate=`date +'%F %T'`
+echo "Setting Pyrus camera datetime to $curdate"
+expect << EOF
+exp_internal 0 # set to 1 for debug
+spawn telnet pyruscam
+expect -re ".+login: "
+send "root\r"
+expect -re "Password: "
+send "xmhdipc\r"
+expect "# "
+send "cat /proc/loadavg\r"
+expect "# "
+send_user "Request current datetime..."
+send "date\r"
+expect "# "
+#send_user "Attempt to set datetime to $curdate\n"
+send -- "date -s '$curdate'\r"
+expect "# "
+send_user "Re-request date to check it was updated\n"
+send "date\n"
+send "exit\n"
+send_user "All done\n"
+EOF
