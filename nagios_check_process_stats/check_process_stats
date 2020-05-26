@@ -18,8 +18,12 @@ my $np = Monitoring::Plugin->new(
 );
 
 $np->add_arg(
-    spec => "process_name|p=s",
+    spec => "process_name|n=s",
     help => "Only processes with this name",
+);
+$np->add_arg(
+    spec => "process_name_re|pr=s",
+    help => "Only processes whose name matches this regex",
 );
 
 $np->add_arg(
@@ -74,8 +78,11 @@ for my $process (@$procs) {
     $proc_name =~ s/\s+$//;
     $proc_name =~ s/\s/_/g;
 
-    next if $np->opts->process_name 
-        && $proc_name ne $np->opts->process_name;
+    # If we have a process_name or process_name_re arg, see if this one matches
+    next if $np->opts->process_name
+        && $process->fname ne $np->opts->process_name;
+    next if $np->opts->process_name_re
+        && $process->fname !~ $np->opts->process_name_re;
 
     next if $process->pgrp == 0 and !$np->opts->include_kernel;
 
