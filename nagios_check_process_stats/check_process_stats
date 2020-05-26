@@ -51,6 +51,12 @@ $np->add_arg(
     default => 0,
 );
 
+# This one is mostly of use if you've used process_name_re to match multiple
+# process names but want them to all be counted together as one logical thing
+$np->add_arg(
+    spec => "override_process_name|o=s",
+    help => "Override process name to all matches processes",
+);
 
 $np->getopts;
 
@@ -95,6 +101,13 @@ for my $process (@$procs) {
     # TODO: would like to re-work this for better CPU usage figures anyway -
     # i.e. CPU time used in last $x seconds or something.
     $pctcpu = 0 if $pctcpu eq 'inf';
+
+    # If we have a override_proc_name value, then use this to track the usage
+    # of this process; useful if you're e.g. using process_name_re to match
+    # Firefox and its content children with 'firefox|Web Content.+'
+    if (my $override_name = $np->opts->override_process_name) {
+        $proc_name = $override_name;
+    }
 
     $cpu_totals{ $proc_name } += $process->pctcpu;
     $mem_totals{ $proc_name } += $process->rss / 1024;
