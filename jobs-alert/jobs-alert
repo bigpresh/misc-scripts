@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 
 use strict;
+use Encode;
 use HTML::TableExtract;
 use Mail::Sendmail;
 use Net::Netrc;
@@ -63,12 +64,14 @@ if (@jobs) {
     }
 
     $msg .= "\n\n\nSee them all at https://jobs.perl.org/admin/\n";
+    my $bytes = encode('utf8', $msg);
 
     Mail::Sendmail::sendmail(
         To => 'davidp@preshweb.co.uk',
         From => 'davidp@preshweb.co.uk',
         Subject => scalar(@jobs) . " jobs to approve on jobs.perl.org",
-        message => $msg,
+        charset => 'utf8',
+        _text => $bytes,
     ) or die "Failed to send notification email";
 }
 
