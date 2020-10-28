@@ -1,0 +1,114 @@
+#!/usr/bin/env perl
+
+use strict;
+use 5.012;
+use DBI;
+use Expect;
+use Net::Netrc;
+use SQL::Abstract;
+
+
+my $dbh = DBI->connect(
+    "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf"
+) or die "Failed to connect to DB! $DBI::errstr";
+my $sqla = SQL::Abstract->new;
+
+my $router_ip = "192.168.1.1"; # TODO: make it a command-line arg?
+
+my $mach = Net::Netrc->lookup($router_ip)
+    or die "No entry for $router_ip in .netrc";
+my ($user, $pass) = $mach->lpa;
+
+$Expect::Exp_Internal = 1;
+
+my $expect = Expect->spawn("ssh $user\@$router_ip")
+    or die "Failed to spawn ssh $user\@$router_ip- $!";
+
+$expect->expect(2,
+    [ qr/password:/ => sub {
+        shift->send("$pass\n");
+        exp_continue;
+    }
+    ],
+    [ qr/ZySH>*?/ => sub {
+            shift->send("xdslctl info --stats\n");
+        },
+    ],
+);
+
+# Read until EOF, or timeout
+$expect->expect(2);
+
+process_result($expect->before);
+
+sub process_result {
+    my $result = shift;
+
+    my %stats;
+    # A list of patterns to match against the `xdslctl info --stats` output.
+    # Each named capture gets added to %stats.
+    
+    my @patterns = (
+        qr{Status: \s (?<status>   .+ ) $}xm,
+        qr{Training \s Status: \s+ (?<training> .+ ) $}xm,
+        qr{
+            Bearer:\s0, \s
+            Upstream \s rate \s   = \s (?<rate_up>\d+) \s Kbps, \s 
+            Downstream \s rate \s = \s (?<rate_down> \d+) \s Kbps
+        }xm,
+        qr{
+            SNR \s \(dB\): \s+ 
+            (?<snr_down> [0-9.]+ ) \s+
+            (?<snr_up>   [0-9.]+ )
+        }xm,
+       qr{
+            Attn\(dB\): \s+
+            (?<attn_down> [0-9.]+ ) \s+
+            (?<attn_up>   [0-9.]+ )
+        }xm,
+        qr{
+            Pwr\(dBm\): \s+
+            (?<power_down> [0-9.]+ ) \s+
+            (?<power_up>   [0-9.]+ )
+        }xm,
+    );
+    for my $patt (@patterns) {
+        $result =~ $patt
+            or die "Failed to match pattern $patt";
+        $stats{$_} = $+{$_} for keys %+;
+    }
+
+    # Now, find the FEC (forward-error-corrections) counts for the
+    # "Latest 15 minutes time" section (i.e. the most recent values)
+    # ... that 15 minutes period will actually be however long it's been
+    # since the last 15 minute mark; work out how many seconds the period
+    # lasted, and divide the FEC counters by the time to get a rate, which
+    # is what we're interested in.
+    $result =~ m{
+        Latest \s 15 \s minutes \s time \s = \s 
+        (?<mins> \d+) \s min \s (?<secs> \d+ ) \s sec
+        \r?\n
+        FEC: \s+ (?<fec_down> \d+ ) \s+ (?<fec_up> \d+ )
+        \r?\n
+        CRC: \s+ (?<crc_down> \d+ ) \s+ (?<crc_up> \d+ )
+    }xm or die "Feck!  No FEC stats.";
+    my $secs = ($+{mins} * 60) + $+{secs};
+    # For each stat (fec_up/fec_down, crc_up/crc_down), calculate a rate per
+    # second
+    for my $stat (qw(fec_down fec_up crc_down crc_up)) {
+        $stats{$stat."_per_sec"} = sprintf '%.3f', $+{$stat} == 0 
+            ? 0 
+            : $+{$stat} / $secs;
+    }
+    $stats{$_} = $+{$_} for keys %+;
+
+    # A few of the fields we captured along the way don't actually go in
+    # the DB
+    delete $stats{$_} for qw(secs mins fec_up fec_down crc_up crc_down);
+
+    my ($sql, @bind) = $sqla->insert('xdslstats', \%stats);
+    $dbh->do($sql, {}, @bind);
+
+
+}
+
