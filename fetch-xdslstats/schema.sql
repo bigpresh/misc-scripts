@@ -1,5 +1,6 @@
 CREATE TABLE xdslstats (
     timestamp TIMESTAMP DEFAULT NOW(),
+    router     VARCHAR(255),
     status     VARCHAR(255),
     training   VARCHAR(255),
     rate_up    FLOAT,

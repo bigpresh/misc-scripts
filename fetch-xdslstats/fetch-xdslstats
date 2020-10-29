@@ -13,16 +13,14 @@ my $dbh = DBI->connect(
 ) or die "Failed to connect to DB! $DBI::errstr";
 my $sqla = SQL::Abstract->new;
 
-my $router_ip = "192.168.1.1"; # TODO: make it a command-line arg?
+my $router = shift || "192.168.1.1";
 
-my $mach = Net::Netrc->lookup($router_ip)
-    or die "No entry for $router_ip in .netrc";
+my $mach = Net::Netrc->lookup($router)
+    or die "No entry for $router in .netrc";
 my ($user, $pass) = $mach->lpa;
 
-$Expect::Exp_Internal = 1;
-
-my $expect = Expect->spawn("ssh $user\@$router_ip")
-    or die "Failed to spawn ssh $user\@$router_ip- $!";
+my $expect = Expect->spawn("ssh $user\@$router")
+    or die "Failed to spawn ssh $user\@$router - $!";
 
 $expect->expect(2,
     [ qr/password:/ => sub {
@@ -105,6 +103,10 @@ sub process_result {
     # A few of the fields we captured along the way don't actually go in
     # the DB
     delete $stats{$_} for qw(secs mins fec_up fec_down crc_up crc_down);
+
+    # And we want to record which router this is for, in case you're monitoring
+    # multiple ones
+    $stats{router} = $router;
 
     my ($sql, @bind) = $sqla->insert('xdslstats', \%stats);
     $dbh->do($sql, {}, @bind);
