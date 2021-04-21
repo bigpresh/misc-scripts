@@ -7,13 +7,44 @@ use JSON;
 use LWP::UserAgent;
 use Net::Netrc;
 
-# A script intended to be fed the output from rtl_433 -G -F JSON
+# A script intended to be fed the output from rtl_433 -F json
 #
 # Each time a line of JSON is received, parse it, and insert a record in the
 # database.
 #
 # Expects DB connection details in ~/.my.cnf
 
+# Expect multiple messages at a time from some sensors.
+#
+#
+# Sensors to watch...
+# Garden temp - model Acurite-Tower id 7962 (battery_ok, temperature_C, humidity)
+#  - subtract 100 from humidity
+# {"time" : "2021-04-15 14:46:47", "model" : "Acurite-Tower", "id" : 7962,
+# "channel" : "A", "battery_ok" : 1, "temperature_C" : 10.100, "humidity" : 127,
+# "mic" : "CHECKSUM"}
+#
+# Oil - model Oil-SonicStd id 855a9d5 (depth_cm, maybetemp, temperature_C
+# {"time" : "2021-04-15 15:04:08", "model" : "Oil-SonicStd", "id" : 65535,
+# "flags" : 244, "alarm" : 1, "binding_countdown" : 0, "depth_cm" : 256}
+# ... but that one appears to be bullshit - the ID looks like an overflow -
+# This one looks plausible, assuming that it is, in fact, ours:
+# Monitor for a while and compare the figures to what we see on the receiver
+# {"time" : "2021-04-15 15:18:44", "model" : "Oil-SonicSmart", "id" : 139831765,
+# "flags" : 160, "maybetemp" : 16, "temperature_C" : 21.667, "binding_countdown"
+# : 0, "depth_cm" : 69}
+#
+# Freezer (check which) - 
+# {"time" : "2021-04-15 14:46:54", "model" : "LaCrosse-TX141Bv2", "id" : 130,
+# "channel" : 2, "temperature_C" : -25.600, "battery_ok" : 0, "test" : "No"}
+#
+# Not sure which sensor this one is - our front one? Alans?
+# {"time" : "2021-04-15 14:47:02", "model" : "Bresser-3CH", "id" : 1, "channel"
+# : 1, "battery_ok" : 0, "temperature_F" : 51.000, "humidity" : 27, "mic" :
+# "CHECKSUM"}
+# (51F = 10.5C)
+#
+#
 my $ua = LWP::UserAgent->new(
     agent => $0,
     timeout => 5,
@@ -58,19 +89,29 @@ while (my $line = <>) {
                 );
             }
         }
-
+    } elsif ($data->{model} eq 'Oil-SonicStd' && $data->{id} == 139831765) {
+        oil_insert_sth()->execute(
+            @$data{qw(depth_cm temperature_C maybetemp)}
+        ) or warn "DB insert failed: " . get_db()->errstr;
     } elsif (exists $data->{temperature_C}) {
         # Looks like it may be a temp sensor, see what one
-        if ($data->{model} eq 'THGR122N' && $data->{channel} eq 3) {
+        if ($data->{model} eq 'Acurite-Tower' && $data->{id} == 7962) {
             my $sensor_name = "Garden";
+            # The humdity readings, e.g. 127, look suspiciously like they
+            # need 100 taken off.  Did wonder if they were decimal, e.g. 12.7
+            # for 127, but it seems too low.  At the time I saw 127, forecast
+            # humidty was more like 60%, long sutton weather station reported
+            # 47%... but unknown "Bresser-3CH" sensor also reported 27%, so that
+            # matches nicely
+            $data->{humidity} -= 100;
             temp_insert_sth()->execute(
-                $sensor_name, @$data{qw(temperature_C humidity battery)},
+                $sensor_name, @$data{qw(temperature_C humidity battery_ok)},
             ) or warn "DB insert failed: " . get_db()->errstr;
         } else {
             warn "Temperature event from unrecognised sensor: $line";
         }
     } else {
-        `beep`;
+        #`beep`;
         warn "Unrecognised event: $line";
     }       
 
@@ -95,6 +136,17 @@ INSERT INTO temperature_records (
     timestamp, sensor, temp_c, humidity_pc, battery_state
 ) values (
     now(), ?,?,?,?
+)
+SQL
+        return $sth;
+    }
+    sub oil_insert_sth {
+        my $dbh = get_db();
+        my $sth = $dbh->prepare(<<SQL);
+INSERT INTO oil_levels (
+    timestamp, depth_cm, temp_c, maybetemp)
+) values (
+    now(), ?,?,?
 )
 SQL
         return $sth;
