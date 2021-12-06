@@ -54,7 +54,7 @@ while (my $line = $rdfh->getline) {
         $last_mirror    = undef;
         last;
     }
-    $last_mirror = (split /\s/, $line)[0];
+    $line =~ /^(\d{10})/ and $last_mirror = $1;
 }
 $rdfh->close;
 
