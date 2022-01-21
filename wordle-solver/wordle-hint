@@ -1,0 +1,62 @@
+#!/usr/bin/env perl
+
+# Quick Wordle helper
+# Usage: wordle-hint <hint> <includes> <exclude>
+# where:
+# hint is e.g. "...er" using dots for "don't know" and letters in their
+#     known to be correct places
+# includes is a list of letters known to be in the word, but their position
+#     is unknown yet
+# exclude is a list of letters known not to be in the word
+# e.g. wordle-hint .o... r sweganhyjku
+
+use 5.012;
+
+my $dict = '/usr/share/dict/words';
+
+my ($hint, $includes, $excludes) = @ARGV;
+
+if (length($hint) != 5) {
+    die "Hint must be 5 characters long\n";
+}
+
+if (!$includes || !$excludes) {
+    die "Usage: $0 hint includeletters excludeletters\n\n"
+        . "For e.g. '$0 .o... r sweganhyjk'\n"
+        . " - know 2nd letter is 'o', know there's an 'r' somewhere,\n"
+        . "and know there's no s, w, e, g, a, n  etc";
+}
+
+# Sure I could do these better with a hairy lookaround regex, but KISS for now
+my $hint_re = qr/$hint/ or die "Invalid hint regex '$hint'!";
+my $exclude_class = "[$excludes]";
+say "exclude_class: $exclude_class";
+my $exclude_re = qr{$exclude_class};
+my @known_present_letters = split //, $includes;
+my @known_missing_letters = split //, $excludes;
+
+say "look for matches for $hint_re, excluding $exclude_re";
+open my $fh, "<", $dict
+    or die "Failed to open dictionary $dict - $!";
+
+word:
+while (chomp(my $word = <$fh>)) {
+    # All Wordle words are 5 letters:
+    next word if length($word) != 5;
+    # Exclude any contractions, accented chars etc
+    next word if $word =~ /[^a-z]/;
+    # Must match our hint pattern (e.g. known-right letters in known-right
+    # places)
+    next word unless $word =~ $hint_re;
+
+    # Must contain all of the letters that we know are present but don't yet
+    # know their position
+    for (@known_present_letters) {
+        next word unless $word =~ /$_/;
+    }
+    # and must not contain any of the letters we know are not present:
+    next word if $word =~ $exclude_re;  # must not contain known-not-to-be-present
+    say "Consider '$word'";
+}
+    
+
