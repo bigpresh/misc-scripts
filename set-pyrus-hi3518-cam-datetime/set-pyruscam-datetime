@@ -10,11 +10,12 @@
 # Yes, this is the kind of device that gets put on its own subnet where it
 # cannot talk outbound at all, because I do not trust it.
 
+camera_hostname=$1
 curdate=`date +'%F %T'`
-echo "Setting Pyrus camera datetime to $curdate"
+echo "Setting Pyrus camera $camera_hostname's datetime to $curdate"
 expect << EOF
 exp_internal 0 # set to 1 for debug
-spawn telnet pyruscam
+spawn telnet $camera_hostname
 expect -re ".+login: "
 send "root\r"
 expect -re "Password: "
