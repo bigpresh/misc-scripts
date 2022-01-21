@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use strict;
+use 5.012;
 use Encode;
 use HTML::TableExtract;
 use Mail::Sendmail;
