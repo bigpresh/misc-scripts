@@ -79,4 +79,4 @@ $dbh->do(qq{
     )
 }, {},$hostname, $avg_temp, $avg_hum
 ) or die "DB insert failed - " . $dbh->errstr;
-
+print "OK, stored reading $avg_temp C, $avg_hum %\n" if $ENV{DEBUG};
