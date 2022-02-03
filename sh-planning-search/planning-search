@@ -1,0 +1,148 @@
+#!/usr/bin/env perl
+
+# Quick script to search for new planning permission applications in some
+# nearby areas and email me when new ones are seen.
+
+use 5.012;
+
+use DateTime;
+use DBI;
+use HTML::TableExtract;
+use List::Util;
+use Mail::Sendmail;
+use WWW::Mechanize;
+
+my $url_stub   = "https://planning.sholland.gov.uk/OcellaWeb/";
+my $search_url = $url_stub . "planningSearch";
+
+# We'll assemble a hash of applications to email about, keyed on the reference,
+# since we're searching multiple areas - so if two areas overlap, we won't
+# get duplicate entries.  (Not sure that *would* happen, but it's trivial to
+# defend against it!)
+my %applications_to_email;
+
+if (!$ENV{DEBUG}) {
+    my $sleep_secs = 60 * int(rand 6) + int rand 30;
+    say "Sleep for $sleep_secs secs before starting (to look natural)";
+    sleep $sleep_secs;
+}
+
+my $dbh = DBI->connect(
+    "DBI:mysql:davidp;mysql_read_default_file=$ENV{HOME}/.my.cnf",
+);
+
+my $fetch_sth  = $dbh->prepare(<<SQL);
+SELECT * FROM planning_application_seen WHERE Reference = ?
+SQL
+my $insert_sth = $dbh->prepare(<<SQL);
+INSERT INTO planning_application_seen (Reference, Location, Proposal, Received, Type, Status, Link)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+SQL
+
+my $ua = random_ua();
+say "Tonight Matthew I'm going to be $ua";
+my $mech = WWW::Mechanize->new(agent => $ua );
+
+my @parishes = (
+    'Long Sutton',
+    'Lutton',
+    'Gedney',
+    'Tydd St Mary',
+    'Sutton Bridge',
+);
+
+area:
+for my $area (@parishes) {
+    say "Searching for applications for $area...";
+    say "\tFetch main search page";
+    $mech->get($search_url);
+    $mech->select(area => $area);
+
+    $mech->field(receivedFrom => DateTime->now->subtract( days => 7)->strftime('%d-%m-%y'));
+    $mech->field(receivedTo   => DateTime->now->strftime('%d-%m-%y'));
+    say "\tSearch...";
+    $mech->click_button( value => 'Search' );
+
+    say "Search result: " . $mech->content if $ENV{DEBUG};
+
+    if ($mech->content =~ /No applications found for entered search criteria/) {
+        say "Nothing to report for $area";
+        sleep random_sleep_time();
+        next area;
+    }
+
+    my @table_cols = qw(Reference Location Proposal Received Type Status);
+    my $te = HTML::TableExtract->new( headers => \@table_cols );
+    $te->parse($mech->content);
+
+    for my $row ($te->rows) {
+        my %data;
+        @data{@table_cols} = @$row;
+        $data{Link} = $url_stub . "planningDetails?reference=$data{Reference}&from=planningSearch";
+        use Data::Printer;
+        p %data;
+
+        # Insert into "Seen" table; if it wasn't already there, add it to
+        # our list to email.  Note - the REPLACE INTO query will just update
+        # if a record with the primary key (Reference) already existed, and in
+        # that case, the rows affected returned will be 2, otherwise it'll be
+        # 1.
+        if ($fetch_sth->execute($data{Reference})) {
+            say "Already seen $data{Reference} before";
+        } else {
+            $insert_sth->execute(@data{@table_cols}, $data{Link});
+            say "Newly-seen $data{Reference}, add to email";
+            $applications_to_email{ $data{Reference} } = \%data;
+        }
+    }
+    say "Wait a little...";
+    sleep random_sleep_time();
+}
+
+say "Searches complete...";
+p %applications_to_email;
+if (keys %applications_to_email) {
+    say "OK, need to email";
+    my $msg = "Some new planning applications have been found:\n\n";
+
+    for my $application (values %applications_to_email) {
+        $msg .= <<APP;
+Reference: $application->{Reference}
+Location : $application->{Location}
+Type     : $application->{Type}
+Proposal : $application->{Proposal}
+$application->{Link}
+
+APP
+    }
+    Mail::Sendmail::sendmail(
+        To => 'davidp@preshweb.co.uk',
+        From => 'planningsearch@preshweb.co.uk',
+        Subject => scalar(keys(%applications_to_email)) . " planning applications found",
+        Message => $msg,
+    ) or warn "failed to send mail - $Mail::Sendmail::error";
+}
+
+
+
+# Both to not be inconsiderate and spam them with too many requests too quickly
+# and to stand out less as an automated thing, pick a random wait time each
+# time - but be quicker when we're debugging (waiting too long to test is
+# annoying, but when running from cron it doesn't really matter how long we
+# take!)
+sub random_sleep_time {
+    return $ENV{DEBUG} ? 2 : int(rand 10) + 5;
+}
+
+# So we can stand out less as a bot
+sub random_ua {
+    return ( 
+        List::Util::shuffle(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.87 Mobile Safari/537.36',
+            'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:96.0) Gecko/20100101 Firefox/96.0', 
+        )
+    )[0];
+}
+
