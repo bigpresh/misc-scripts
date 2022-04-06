@@ -35,8 +35,8 @@ my $fetch_sth  = $dbh->prepare(<<SQL);
 SELECT * FROM planning_application_seen WHERE Reference = ?
 SQL
 my $insert_sth = $dbh->prepare(<<SQL);
-INSERT INTO planning_application_seen (Reference, Location, Proposal, Received, Type, Status, Link)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO planning_application_seen (Reference, Location, Proposal, Received, Type, Status, Link, Saw)
+VALUES (?, ?, ?, ?, ?, ?, ?, now())
 SQL
 
 my $ua = random_ua();
@@ -87,8 +87,11 @@ for my $area (@parishes) {
         # if a record with the primary key (Reference) already existed, and in
         # that case, the rows affected returned will be 2, otherwise it'll be
         # 1.
-        if ($fetch_sth->execute($data{Reference})) {
-            say "Already seen $data{Reference} before";
+        $fetch_sth->execute($data{Reference})
+            or die "Failed to execute fetch query for $data{Reference} - "
+                . $dbh->errstr;
+        if (my $seen = $fetch_sth->fetchrow_hashref) {
+            say "Already saw $seen->{Reference} on $seen->{Saw}";
         } else {
             $insert_sth->execute(@data{@table_cols}, $data{Link});
             say "Newly-seen $data{Reference}, add to email";
