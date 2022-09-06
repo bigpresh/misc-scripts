@@ -1,0 +1,26 @@
+<table border="1" padding="2">
+<tr>
+<th>Date</th>
+[% FOREACH child IN children %]
+<th>[% child %]</th>
+[% END %]
+</tr>
+
+
+[% FOREACH date IN meals.keys.sort %]
+
+[%
+  # if this is a Monday, and not the first entry, then add a separator
+  IF date_to_display.$date.match('Monday') AND !loop.first %]
+<tr><td colspan="3"> --- </td></tr>
+[% END %]
+<tr>
+<td>[% date_to_display.$date %]</td>
+[% FOREACH child IN children %]
+<td>[% meals.$date.$child || "PACKED LUNCH" %]</td>
+[% END %]
+</tr>
+[% END %]
+
+</table>
+

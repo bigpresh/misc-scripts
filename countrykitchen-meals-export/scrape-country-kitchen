@@ -1,0 +1,172 @@
+#!/usr/bin/env perl
+
+use 5.012;
+use DateTime;
+use HTML::TableExtract;
+use Net::Netrc;
+use Path::Tiny;
+use Template;
+use WWW::Mechanize;
+
+use FindBin;
+
+my $ack_hostname = "www.acountrykitchen.co.uk";
+
+my $output_filename = "/shared/tmp/meals.html";
+
+# if in test mode, we read cached JSON test data and just generate our
+# output from that, without interacting with the remote system
+my $test_mode = 0;
+
+my $look_forward_weeks = 3;
+
+# FIXME move to config
+my %children = (  # smell
+    2782 => 'Abbie',
+    2765 => 'Scott',
+);
+
+my $creds = Net::Netrc->lookup($ack_hostname)
+    or die "No credentials found in ~./netrc for $ack_hostname";
+
+my $mech = WWW::Mechanize->new;
+
+my ($meals_data, $date_to_display);
+if ($test_mode) {
+    my $test_data = JSON::from_json(
+        path($FindBin::Bin, "test-data.json")->slurp
+    );
+    ($meals_data, $date_to_display)
+        = @$test_data{ qw(meals_data date_to_display) };
+} else {
+
+    ($meals_data, $date_to_display) = get_meals();
+
+    use JSON;
+    say JSON::to_json(
+        {
+            meals_data => $meals_data,
+            date_to_display => $date_to_display,
+        }
+    );
+
+}
+
+generate_output($meals_data, $date_to_display, [ sort values %children ]);
+
+
+
+
+
+sub get_meals {
+
+    $mech->get("https://$ack_hostname/parentLogin.asp");
+
+    $mech->submit_form(
+        with_fields => {
+            username => $creds->login,
+            password => $creds->password,
+        }
+    );
+
+    # warn $mech->content;
+
+
+
+    # day_of_week = 1 is Monday so subtract the required number of days to get
+    # this week's Monday...
+    my $this_monday = DateTime->now->subtract(days => DateTime->now->day_of_week - 1);
+    my @mondays; # ugh - Mondays, bloody Mondays
+    for (0..$look_forward_weeks) {
+        push @mondays, $this_monday->clone->add( weeks => $_ )->date;
+    }
+
+    my %meals;
+    my %date_to_display;
+    for my $pupil_id (sort keys %children) {
+        for my $monday (@mondays) {
+            say "Request meals for $pupil_id ($children{$pupil_id}) for w/c $monday";
+            $mech->post("https://$ack_hostname/viewMeals.asp?pupilID=$pupil_id",
+                {
+                    pickDate => $monday,
+                    # may or may not be needed?
+                    subIt => "See+Ordered+Meals+For:",
+                },
+            );
+            # warn "Meals HTML: " . $mech->content;
+
+            # Look for a HTML table...
+            my $te = HTML::TableExtract->new( depth => 0, count => 0 );
+            $te->parse($mech->content);
+            if (my ($table) = $te->tables) {
+                say "Got a table...";
+                row:
+                for my $row ($table->rows) {
+                    # Don't want header row with no second cell
+                    next row if $row->[1] eq "";
+                    next row if $row->[0] eq "Total";
+
+                    # The date in the HTML will be in the form e.g.:
+                    # "Thursday&nbsp;08 September 2022"
+                    # That gets decoded to an odd char
+                    my ($date, $display_date) = parse_date($row->[0]);
+                    my $meal_order = $row->[1];
+                    $meal_order =~ s/^\s+//ms;
+                    $meal_order =~ s/\s+$//ms;
+                    say "Found row - $date ($display_date)  meal '$meal_order'";
+                    $meals{$date}{$children{$pupil_id}} = $meal_order;
+                    $date_to_display{$date} = $display_date;
+                }
+
+            }
+
+            # If we find meals, for each one, get the date and meal and add to
+            # $meals{date}{child} so we can iterate later for output
+            sleep 3;
+
+        }
+    }
+    return \%meals, \%date_to_display;
+
+}
+
+
+# Given the date we get from them, return the proper format (YYYY-MM-DD) and
+# the friendly display (e.g. Friday 16th September)
+sub parse_date {
+    my $in = shift;
+    my ($day_name, $date, $month_name, $year)
+        = $in =~ /^(\S+).?(\d+)\s(\S+)\s(\d{4})/
+            or die "Invalid date $in";
+    my $i = 1;
+    my %month_to_num = map { $_ => $i++ } qw(
+    January   February   March      April    May      June 
+    July      August     September  October  November December
+    );
+    my $iso = sprintf "%04d-%02d-%02d", $year, $month_to_num{$month_name}, $date;
+    return ($iso, "$day_name $date $month_name");
+}
+
+# Given the output from get_meals() (or a cached set of testing data), generate
+# the output HTML
+sub generate_output {
+    my ($meals, $date_to_display, $children) = @_;
+
+    use DDP;
+    p $meals;
+    p $date_to_display;
+
+    my $tt = Template->new(INCLUDE_PATH => $FindBin::Bin);
+    # can pass a third arg with a filehandle to write the data to
+    open my $out_fh, ">", $output_filename
+        or die "Failed to open $output_filename to write";
+    $tt->process(
+        'meals-summary.tt', 
+        {
+            meals => $meals,
+            date_to_display => $date_to_display,
+            children => $children,
+        },
+        $out_fh
+    );
+}
