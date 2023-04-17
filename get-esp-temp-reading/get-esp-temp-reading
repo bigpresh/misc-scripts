@@ -32,10 +32,17 @@ my @humidities;
 
 for (1..5) {
     my $response = $ua->get("http://$hostname/");
+    my $retries = 0;
     if (!$response->is_success) {
         warn "Failed request to $hostname - " . $response->status_line;
-        sleep 10;
-        redo;
+
+        if ($retries++ < 10) {
+            sleep 10;
+            redo;
+        } else {
+            die "Request to $hostname failed after $retries retries"
+                . " - " . $response->status_line;
+        }
     }
     if ($response->content =~ /timeout/) {
         warn "DHT reading timeout";
