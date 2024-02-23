@@ -22,6 +22,14 @@ The optional C<--rdiff-backup> option sets the path to the C<rdiff-backup>
 script; by default, just C<rdiff-backup> will be used, which will work assuming
 that C<rdiff-backup> is found in C<$PATH>.
 
+If the ownership on the backups is such that the user Nagios runs as wouldn't
+normally be able to read them, you can use the C<--sudo> option to have
+C<rdiff-backup> run using sudo - of course, you'll have to arrange for the
+Nagios user to do that - something like this in your sudoers file:
+
+  nagios  ALL=   NOPASSWD: /usr/bin/rdiff-backup
+
+
 =head1 AUTHOR
 
 David Precious C<< <davidp@preshweb.co.uk> >>
