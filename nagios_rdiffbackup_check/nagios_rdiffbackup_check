@@ -35,10 +35,16 @@ $np->add_arg(
     help => "Path to rdiff-backup",
     default => 'rdiff-backup',
 );
+$np->add_arg(
+    spec => 'sudo|s',
+    help => "Use sudo to run rdiff-backup",
+    default => 0,
+);
 
 $np->getopts;
 
 my $rdfh = FileHandle->new(
+    ($np->opts->sudo ? '/usr/bin/sudo ' : '') .
     $np->opts->rdiff_backup . ' -l --parsable-output ' . $np->opts->dest 
         . ' 2>&1 |'
 ) or $np->nagios_die(
