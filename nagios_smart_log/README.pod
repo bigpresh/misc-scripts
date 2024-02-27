@@ -31,9 +31,9 @@ Far more useful.
 
 =head2 Consider check_scsi_smart instead
 
-Update Feb 2024: I was having problems with `check_ide_smart` on a drive
+Update Feb 2024: I was having problems with C<check_ide_smart> on a drive
 in an external enclosure, where running it directly would work fine, but
-when run via Nagios it would fail with `CRITICAL - SMART_CMD_ENABLE`.
+when run via Nagios it would fail with C<CRITICAL - SMART_CMD_ENABLE>.
 
 I couldn't see what was going on easily, and a Google turned up several
 people with the same problem, including:
@@ -50,7 +50,7 @@ people with the same problem, including:
 
 The Debian report suggested the problem was fixed in Wheezy and Jessie packages,
 but I was still seeing it on my Debian 12 (Buster) box with monitoring-plugins 
-package version `2.3.3-5+deb12u2`.
+package version C<2.3.3-5+deb12u2>.
 
 I saw L<check_scsi_smart|https://github.com/spjmurray/nagios-plugin-check-scsi-smart>
 recommended as a more modern alternative to C<check_ide_smart>; it works a treat
