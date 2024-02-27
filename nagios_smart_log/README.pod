@@ -4,8 +4,9 @@ A Nagios plugin to monitor for errors reported by
 L<SMART|http://en.wikipedia.org/wiki/S.M.A.R.T.> to alert on failing hard
 drives.
 
-I've used the old C<check_ide_smart> plugin from Nagios itself, but it relies
-upon SMART detecting and reporting problems well.
+I'd long used the good old C<check_ide_smart> plugin from Nagios itself, but 
+it relies upon SMART detecting and reporting problems well and doesn't
+monitor the SMART logs for failed self-tests etc.
 
 I've seen a few drives failing and throwing IO errors, all the while SMART
 happily proclaims:
@@ -17,7 +18,7 @@ Similarly, C<check_ide_smart> reported no problems:
   [dave@devvps:~]$ sudo /usr/lib/nagios/plugins/check_ide_smart -n /dev/sdb
   OK - Operational (18/18 tests passed)
 
-I can no longer trust it.
+I can no longer trust it alone.
 
 So, this plugin requests the error log (using C<smartctl -l errors> and alarms
 if errors are found:
@@ -27,4 +28,35 @@ if errors are found:
   power-on lifetime: 29769 hours (1240 days + 9 hours)
 
 Far more useful.
+
+=head2 Consider check_scsi_smart instead
+
+Update Feb 2024: I was having problems with `check_ide_smart` on a drive
+in an external enclosure, where running it directly would work fine, but
+when run via Nagios it would fail with `CRITICAL - SMART_CMD_ENABLE`.
+
+I couldn't see what was going on easily, and a Google turned up several
+people with the same problem, including:
+
+=over
+
+=item L<Icinga #2725|https://community.icinga.com/t/unable-to-perform-check-ide-smart-on-agent/2725>
+
+=item L<monitoring-plugins#1104|https://github.com/monitoring-plugins/monitoring-plugins/issues/1104>
+
+=item L<Debian #690760|https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=690760>
+
+=back
+
+The Debian report suggested the problem was fixed in Wheezy and Jessie packages,
+but I was still seeing it on my Debian 12 (Buster) box with monitoring-plugins 
+package version `2.3.3-5+deb12u2`.
+
+I saw L<check_scsi_smart|https://github.com/spjmurray/nagios-plugin-check-scsi-smart>
+recommended as a more modern alternative to C<check_ide_smart>; it works a treat
+for me, and also can monitor the SMART logs as well, replacing the need for
+this plugin.
+
+So, I'd recommend you give it a go first, and props to L<@spjmurray|https://github.com/spjmurray> for it.
+
 
