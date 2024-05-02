@@ -3,6 +3,9 @@
 
 # Rename MP3s in a given directory based on their ID3
 # tags.
+# If a second arg is given, it's a format string to use instead of
+# the default - for e.g.
+#   mp3-rename /path/to/dir "%{track} - %{title} - %{artist}.mp3"
 # 
 # David Precious, originally 10/04/2006
 #
@@ -36,13 +39,20 @@ for my $file (@files) {
         next file;
     };
 
-    $renames{$file} = File::Spec->catfile($startdir,  
-        join(' - ',
-            (sprintf('%02d',$info->track()),
-                clean($info->title()), &clean($info->artist())
-            )
-        ) . '.mp3'
+    # Available tags to use in the format string
+    my %tag_value = (
+        track => sprintf('%02d', $info->track()),
+        title => clean($info->title()),
+        artist => clean($info->artist()),
     );
+    my $new_filename = $ARGV[1] || "%{track} - %{title} - %{artist}.mp3";
+    $new_filename .= ".mp3" unless $new_filename =~ /\.mp3$/;
+    warn "before filling in: $new_filename";
+
+    $new_filename =~ s{%\{(.+?)\}}{$tag_value{$1}}eg;
+    warn "After: $new_filename";
+
+    $renames{$file} = File::Spec->catfile($startdir, $new_filename);
 }
 
 # get the current screen width so we can work out column sizes:
@@ -102,5 +112,7 @@ sub clean {
     my $in = shift;
     $in =~ s/[^a-z0-9_&+ -]//gi;
     $in =~ s/(^\s+|\s+$)//g;
+
+    $in =~ s/\s*PMEDIA\s*//g;
     return $in;
 } # end of sub clean
