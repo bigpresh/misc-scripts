@@ -197,10 +197,12 @@ my ($highest_mem) = sort {
 my ($most_procs)  = sort {
     $count_by_name{$b} <=> $count_by_name{$a}
 } keys %count_by_name;
+warn "memory figures: " . join ",", values %mem_totals;
+my ($total_mem) = sprintf '%.2fMB', List::Util::sum(values %mem_totals) / 1024;
 my $status_msg = "$total_procs total procs";
 # The details on "greediest bastards" only really makes sense to add if we're
 # not filtering by name
-if (!$np->opts->process_name) {
+if (!$np->opts->override_process_name) {
     my $group_count = scalar keys %count_by_name;
     $status_msg .= ", $group_count unique names";
 
@@ -211,9 +213,10 @@ if (!$np->opts->process_name) {
     $status_msg .= ", highest RAM $highest_mem with "
     . $highest_mem_value . ", highest CPU $highest_cpu with "
     . $cpu_totals{$highest_cpu} . "%, most procs $most_procs with "
-    . $count_by_name{$most_procs} . " processes";
+    . $count_by_name{$most_procs} . " processes, total RAM $total_mem";
 } else {
-    $status_msg .= " matching " . $np->opts->process_name;
+    $status_msg .= " matching pattern for " . $np->opts->override_process_name
+        . " total RAM usage $total_mem";
 }
 
 $np->nagios_exit(OK, $status_msg);
